@@ -1,0 +1,303 @@
+// =============================================================================
+// SOLUTION 1: CUSTOMER CHURN ANALYSIS — DAX MEASURES LIBRARY
+// Paste into Power BI using Tabular Editor or one-by-one in the Modeling tab
+// Table references: fact_MonthlySnapshot, dim_Customers, dim_Plans, dim_Date
+// Author: Madhura Pal | Portfolio Project
+// =============================================================================
+
+
+// ── TABLE: _Churn Measures (create a dedicated measures table for clean UX) ──
+
+
+// =============================================================================
+// SECTION 1: BASE COUNTS
+// =============================================================================
+
+Total Customers =
+// Total unique customers in current filter context
+DISTINCTCOUNT(fact_MonthlySnapshot[customer_key])
+
+Active Customers =
+// Non-churned customers at the latest snapshot in context
+CALCULATE(
+    DISTINCTCOUNT(fact_MonthlySnapshot[customer_key]),
+    fact_MonthlySnapshot[is_churned] = FALSE()
+)
+
+Churned Customers =
+CALCULATE(
+    DISTINCTCOUNT(fact_MonthlySnapshot[customer_key]),
+    fact_MonthlySnapshot[is_churned] = TRUE()
+)
+
+New Customers MTD =
+// Customers whose cohort date falls in the selected month
+CALCULATE(
+    DISTINCTCOUNT(fact_MonthlySnapshot[customer_key]),
+    fact_MonthlySnapshot[months_since_start] = 0,
+    DATESMTD(dim_Date[Date])
+)
+
+
+// =============================================================================
+// SECTION 2: CHURN RATE METRICS
+// =============================================================================
+
+Churn Rate % =
+// Classic churn rate: Churned / Total at start of period
+VAR _total    = [Total Customers]
+VAR _churned  = [Churned Customers]
+RETURN
+    DIVIDE(_churned, _total, 0)
+
+Monthly Churn Rate % =
+// Churn rate scoped to a single month (use with month slicer)
+VAR _selected_month  = SELECTEDVALUE(dim_Date[Month Number])
+VAR _selected_year   = SELECTEDVALUE(dim_Date[Year])
+VAR _churned_month   = CALCULATE(
+    DISTINCTCOUNT(fact_MonthlySnapshot[customer_key]),
+    fact_MonthlySnapshot[is_churned] = TRUE(),
+    dim_Date[Month Number] = _selected_month,
+    dim_Date[Year]         = _selected_year
+)
+VAR _total_month = CALCULATE(
+    DISTINCTCOUNT(fact_MonthlySnapshot[customer_key]),
+    dim_Date[Month Number] = _selected_month,
+    dim_Date[Year]         = _selected_year
+)
+RETURN DIVIDE(_churned_month, _total_month, 0)
+
+Churn Rate % (Rolling 3M) =
+// Smoothed churn rate over trailing 3 months — better than point-in-time
+VAR _last_date   = MAX(dim_Date[Date])
+VAR _start_date  = EDATE(_last_date, -3)
+VAR _churned     = CALCULATE(
+    DISTINCTCOUNT(fact_MonthlySnapshot[customer_key]),
+    fact_MonthlySnapshot[is_churned] = TRUE(),
+    dim_Date[Date] >= _start_date,
+    dim_Date[Date] <= _last_date
+)
+VAR _total       = CALCULATE(
+    DISTINCTCOUNT(fact_MonthlySnapshot[customer_key]),
+    dim_Date[Date] >= _start_date,
+    dim_Date[Date] <= _last_date
+)
+RETURN DIVIDE(_churned, _total, 0)
+
+Churn Rate MoM Change =
+// Month-over-month delta in churn rate (useful for trend arrows)
+VAR _current  = [Churn Rate %]
+VAR _prior    = CALCULATE([Churn Rate %], DATEADD(dim_Date[Date], -1, MONTH))
+RETURN _current - _prior
+
+Annualised Churn Rate % =
+// Projects monthly churn to annual — standard SaaS metric
+VAR _monthly = [Monthly Churn Rate %]
+RETURN 1 - POWER(1 - _monthly, 12)
+
+
+// =============================================================================
+// SECTION 3: MRR / ARR
+// =============================================================================
+
+Total MRR =
+// Monthly Recurring Revenue across active customers
+CALCULATE(
+    SUM(fact_MonthlySnapshot[mrr]),
+    fact_MonthlySnapshot[is_churned] = FALSE()
+)
+
+Total ARR =
+// Annual Recurring Revenue = MRR × 12
+[Total MRR] * 12
+
+MRR Churned =
+// Revenue lost to churn this period
+CALCULATE(
+    SUM(fact_MonthlySnapshot[mrr]),
+    fact_MonthlySnapshot[is_churned] = TRUE()
+)
+
+MRR Prior Month =
+CALCULATE([Total MRR], DATEADD(dim_Date[Date], -1, MONTH))
+
+MRR Growth MoM % =
+DIVIDE([Total MRR] - [MRR Prior Month], [MRR Prior Month], 0)
+
+MRR Churn Rate % =
+// Dollar churn rate (more meaningful than logo churn for SaaS)
+VAR _lost = [MRR Churned]
+VAR _base = [MRR Prior Month]
+RETURN DIVIDE(_lost, _base, 0)
+
+Net MRR Growth =
+// New MRR + Expansion - Contraction - Churn (waterfall total)
+VAR _new    = CALCULATE([Total MRR], fact_MonthlySnapshot[months_since_start] = 0)
+VAR _expand = CALCULATE(
+    SUMX(
+        fact_MonthlySnapshot,
+        VAR _cur = fact_MonthlySnapshot[mrr]
+        VAR _prv = CALCULATE(
+            MAX(fact_MonthlySnapshot[mrr]),
+            DATEADD(dim_Date[Date], -1, MONTH),
+            ALLEXCEPT(fact_MonthlySnapshot, fact_MonthlySnapshot[customer_key])
+        )
+        RETURN IF(_cur > _prv AND _prv > 0, _cur - _prv, 0)
+    )
+)
+VAR _churn = [MRR Churned]
+RETURN _new + _expand - _churn
+
+
+// =============================================================================
+// SECTION 4: CUSTOMER LIFETIME VALUE
+// =============================================================================
+
+Avg CLV =
+// Average lifetime value = avg monthly spend × avg tenure months
+AVERAGEX(
+    VALUES(fact_MonthlySnapshot[customer_key]),
+    CALCULATE(MAX(fact_MonthlySnapshot[cumulative_spend]))
+)
+
+CLV by Segment =
+// Same as above, respects segment filter context — use in matrix
+AVERAGEX(
+    SUMMARIZE(
+        fact_MonthlySnapshot,
+        fact_MonthlySnapshot[customer_key],
+        "max_spend", MAX(fact_MonthlySnapshot[cumulative_spend])
+    ),
+    [max_spend]
+)
+
+Avg Tenure (Months) =
+AVERAGEX(
+    VALUES(fact_MonthlySnapshot[customer_key]),
+    CALCULATE(MAX(fact_MonthlySnapshot[months_since_start]))
+)
+
+Predicted CLV =
+// Simple: current MRR / churn rate (perpetuity model)
+// Replace with ML score if available
+VAR _avg_mrr     = AVERAGEX(
+    VALUES(fact_MonthlySnapshot[customer_key]),
+    CALCULATE(AVERAGE(fact_MonthlySnapshot[mrr]))
+)
+VAR _monthly_churn = [Monthly Churn Rate %]
+RETURN DIVIDE(_avg_mrr, IF(_monthly_churn = 0, 0.01, _monthly_churn))
+
+
+// =============================================================================
+// SECTION 5: COHORT RETENTION
+// =============================================================================
+
+Cohort Retention % =
+// % of a cohort still active at months_since_start = N
+// Works correctly when both cohort and month-offset are on rows/columns
+VAR _cohort_customers = CALCULATE(
+    DISTINCTCOUNT(fact_MonthlySnapshot[customer_key]),
+    fact_MonthlySnapshot[months_since_start] = 0
+)
+VAR _active_now = CALCULATE(
+    DISTINCTCOUNT(fact_MonthlySnapshot[customer_key]),
+    fact_MonthlySnapshot[is_churned] = FALSE()
+)
+RETURN DIVIDE(_active_now, _cohort_customers, BLANK())
+
+Month 0 Cohort Size =
+// Total customers in this cohort at inception
+CALCULATE(
+    DISTINCTCOUNT(fact_MonthlySnapshot[customer_key]),
+    fact_MonthlySnapshot[months_since_start] = 0
+)
+
+Retention Index =
+// 1.0 = baseline month; <1 = decline; useful for % change heatmap
+VAR _m0 = [Month 0 Cohort Size]
+VAR _mn = DISTINCTCOUNT(fact_MonthlySnapshot[customer_key])
+RETURN DIVIDE(_mn, _m0, BLANK())
+
+
+// =============================================================================
+// SECTION 6: ENGAGEMENT & RISK
+// =============================================================================
+
+Avg Engagement Score =
+AVERAGE(fact_MonthlySnapshot[feature_usage_score])
+
+Avg Logins Last 30d =
+AVERAGE(fact_MonthlySnapshot[logins_last_30d])
+
+Critical Risk Customers =
+CALCULATE(
+    DISTINCTCOUNT(fact_MonthlySnapshot[customer_key]),
+    fact_MonthlySnapshot[churn_risk_label] = "Critical",
+    fact_MonthlySnapshot[is_churned] = FALSE()
+)
+
+Critical Risk MRR =
+// Revenue at risk from critical-risk customers
+CALCULATE(
+    SUM(fact_MonthlySnapshot[mrr]),
+    fact_MonthlySnapshot[churn_risk_label] = "Critical",
+    fact_MonthlySnapshot[is_churned] = FALSE()
+)
+
+Pct Customers At Risk =
+DIVIDE([Critical Risk Customers], [Active Customers], 0)
+
+
+// =============================================================================
+// SECTION 7: TIME INTELLIGENCE (requires Mark as Date Table on dim_Date)
+// =============================================================================
+
+MRR YTD =
+CALCULATE([Total MRR], DATESYTD(dim_Date[Date]))
+
+MRR PYTD =
+// Prior Year-to-Date MRR (YoY comparison)
+CALCULATE([Total MRR], SAMEPERIODLASTYEAR(DATESYTD(dim_Date[Date])))
+
+MRR YoY Growth % =
+DIVIDE([MRR YTD] - [MRR PYTD], ABS([MRR PYTD]), 0)
+
+Churn Rate YoY Change =
+VAR _cur = [Churn Rate %]
+VAR _pyr = CALCULATE([Churn Rate %], SAMEPERIODLASTYEAR(dim_Date[Date]))
+RETURN _cur - _pyr
+
+Customers LM =
+// Last Month — for MoM sparklines
+CALCULATE([Active Customers], DATEADD(dim_Date[Date], -1, MONTH))
+
+Customers QoQ Change =
+VAR _cur  = [Active Customers]
+VAR _pqtr = CALCULATE([Active Customers], DATEADD(dim_Date[Date], -1, QUARTER))
+RETURN _cur - _pqtr
+
+
+// =============================================================================
+// SECTION 8: KPI CARDS (formatted measures for report cards)
+// =============================================================================
+
+Churn Rate Card =
+// Single-number KPI formatted as % for a card visual
+FORMAT([Churn Rate %], "0.0%")
+
+MRR Card =
+FORMAT([Total MRR], "$#,##0")
+
+ARR Card =
+FORMAT([Total ARR], "$#,##0,,\" M\"")
+
+Net Retention Rate % =
+// NRR: (Ending MRR incl. expansion) / Beginning MRR × 100
+// >100% = growth despite churn (gold standard SaaS metric)
+VAR _ending   = [Total MRR]
+VAR _beginning= [MRR Prior Month]
+RETURN DIVIDE(_ending, _beginning, 0)
+
+Logo Retention Rate % =
+// Customer-count retention (opposite of churn rate)
+1 - [Churn Rate %]
