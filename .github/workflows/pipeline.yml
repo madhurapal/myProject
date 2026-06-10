@@ -1,0 +1,273 @@
+# =============================================================================
+# Power BI Analytics Pipeline
+# Triggers: push to main, weekly schedule, manual dispatch
+# Steps: seed DB → run queries → build HTML dashboard → deploy to GitHub Pages
+#        + optional Slack/email notification
+# =============================================================================
+
+name: Analytics Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "database/**"
+      - "connectors/**"
+      - "pipeline/**"
+      - ".github/workflows/pipeline.yml"
+  schedule:
+    # Runs every Monday at 06:00 UTC (refresh weekly dashboard)
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      scale:
+        description: "Data scale factor (1=default, 5=large)"
+        required: false
+        default: "1"
+      reset_db:
+        description: "Reset and reseed the database?"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # needed for gh-pages deployment
+  pages:    write
+  id-token: write
+
+jobs:
+  # ── Job 1: Seed Database ────────────────────────────────────────────────────
+  seed:
+    name: Seed DuckDB
+    runs-on: ubuntu-latest
+    outputs:
+      db_path: ${{ steps.seed.outputs.db_path }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Seed database
+        id: seed
+        env:
+          ANALYTICS_DB_PATH: ${{ github.workspace }}/analytics.duckdb
+          CI: "true"
+        run: |
+          RESET_FLAG=""
+          if [ "${{ github.event.inputs.reset_db }}" = "true" ]; then
+            RESET_FLAG="--reset"
+          fi
+          SCALE="${{ github.event.inputs.scale || '1' }}"
+          python database/seed.py --scale $SCALE $RESET_FLAG
+          echo "db_path=${{ github.workspace }}/analytics.duckdb" >> $GITHUB_OUTPUT
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: analytics-db
+          path: analytics.duckdb
+          retention-days: 1   # ephemeral — only needed within this pipeline run
+
+  # ── Job 2: Build Dashboard ──────────────────────────────────────────────────
+  build:
+    name: Build HTML Dashboard
+    runs-on: ubuntu-latest
+    needs: seed
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download database artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: analytics-db
+          path: .
+
+      - name: Build dashboard
+        env:
+          ANALYTICS_DB_PATH: ${{ github.workspace }}/analytics.duckdb
+          CI: "true"
+        run: |
+          python pipeline/build_dashboard.py --output docs/index.html
+
+      - name: Verify dashboard was created
+        run: |
+          ls -lh docs/index.html
+          echo "Dashboard size: $(du -sh docs/index.html | cut -f1)"
+
+      - name: Upload dashboard artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-html
+          path: docs/
+          retention-days: 7
+
+  # ── Job 3: Deploy to GitHub Pages ──────────────────────────────────────────
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download dashboard artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dashboard-html
+          path: docs/
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Print dashboard URL
+        run: echo "Dashboard live at ${{ steps.deployment.outputs.page_url }}"
+
+  # ── Job 4: Notify (Slack + Email) ──────────────────────────────────────────
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()   # run even if deploy failed — report status either way
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine pipeline status
+        id: status
+        run: |
+          if [ "${{ needs.deploy.result }}" = "success" ]; then
+            echo "emoji=✅" >> $GITHUB_OUTPUT
+            echo "status=Success" >> $GITHUB_OUTPUT
+          else
+            echo "emoji=❌" >> $GITHUB_OUTPUT
+            echo "status=Failed" >> $GITHUB_OUTPUT
+          fi
+
+      # ── Slack notification (set SLACK_WEBHOOK_URL in repo secrets) ─────────
+      - name: Slack notification
+        if: env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-type: application/json' \
+            --data '{
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${{ steps.status.outputs.emoji }} Analytics Pipeline — ${{ steps.status.outputs.status }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    { "type": "mrkdwn", "text": "*Repository:*\n${{ github.repository }}" },
+                    { "type": "mrkdwn", "text": "*Branch:*\n${{ github.ref_name }}" },
+                    { "type": "mrkdwn", "text": "*Triggered by:*\n${{ github.event_name }}" },
+                    { "type": "mrkdwn", "text": "*Run:*\n#${{ github.run_number }}" }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "📊 *Dashboard:* https://madhurapal.github.io/myProject"
+                  }
+                }
+              ]
+            }'
+
+      # ── Email notification via Gmail SMTP ─────────────────────────────────
+      # Set GMAIL_USER and GMAIL_APP_PASSWORD in repo secrets
+      # Generate App Password at: myaccount.google.com/apppasswords
+      - name: Email notification
+        if: env.GMAIL_USER != ''
+        env:
+          GMAIL_USER:         ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NOTIFY_EMAIL:       ${{ secrets.NOTIFY_EMAIL || secrets.GMAIL_USER }}
+          PIPELINE_STATUS:    ${{ steps.status.outputs.status }}
+          PIPELINE_EMOJI:     ${{ steps.status.outputs.emoji }}
+        run: |
+          pip install --quiet secure-smtplib 2>/dev/null || true
+          python - <<'PYEOF'
+          import smtplib, os
+          from email.mime.multipart import MIMEMultipart
+          from email.mime.text import MIMEText
+
+          user     = os.environ["GMAIL_USER"]
+          password = os.environ["GMAIL_APP_PASSWORD"]
+          to       = os.environ["NOTIFY_EMAIL"]
+          status   = os.environ["PIPELINE_STATUS"]
+          emoji    = os.environ["PIPELINE_EMOJI"]
+          run_num  = "${{ github.run_number }}"
+          repo     = "${{ github.repository }}"
+
+          subject  = f"{emoji} Analytics Pipeline #{run_num} — {status}"
+          body     = f"""
+          <html><body style="font-family:Arial,sans-serif;color:#212529">
+          <h2 style="color:#1F4E79">{emoji} Pipeline {status}</h2>
+          <table style="border-collapse:collapse;width:500px">
+            <tr><td style="padding:8px;border:1px solid #dee2e6"><b>Repository</b></td>
+                <td style="padding:8px;border:1px solid #dee2e6">{repo}</td></tr>
+            <tr><td style="padding:8px;border:1px solid #dee2e6"><b>Run #</b></td>
+                <td style="padding:8px;border:1px solid #dee2e6">{run_num}</td></tr>
+            <tr><td style="padding:8px;border:1px solid #dee2e6"><b>Trigger</b></td>
+                <td style="padding:8px;border:1px solid #dee2e6">${{ github.event_name }}</td></tr>
+            <tr><td style="padding:8px;border:1px solid #dee2e6"><b>Dashboard</b></td>
+                <td style="padding:8px;border:1px solid #dee2e6">
+                  <a href="https://madhurapal.github.io/myProject">View Live Dashboard</a>
+                </td></tr>
+          </table>
+          <p style="color:#6c757d;font-size:12px;margin-top:24px">
+            Sent automatically by GitHub Actions · Power BI Analytics Portfolio
+          </p>
+          </body></html>
+          """
+
+          msg = MIMEMultipart("alternative")
+          msg["Subject"] = subject
+          msg["From"]    = user
+          msg["To"]      = to
+          msg.attach(MIMEText(body, "html"))
+
+          with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
+              s.login(user, password)
+              s.sendmail(user, to, msg.as_string())
+          print(f"Email sent to {to}")
+          PYEOF

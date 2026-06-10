@@ -1,0 +1,11 @@
+# Core analytics
+duckdb>=0.10.0
+pandas>=2.0.0
+
+# Data generation (seed script)
+faker>=24.0.0
+
+# Optional: Jupyter notebooks for exploration
+# jupyter>=1.0.0
+# matplotlib>=3.8.0
+# plotly>=5.20.0
