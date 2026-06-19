@@ -1,0 +1,335 @@
+// =============================================================================
+// FitCore Gym — DAX Measures
+// Paste these into Power BI Desktop:
+//   Modeling tab → New Measure
+// All measures live in a dedicated "Measures" table (blank query, no rows)
+// =============================================================================
+
+
+// =============================================================================
+// SECTION 1 — MEMBER COUNTS
+// =============================================================================
+
+Total Members =
+COUNTROWS( Members )
+
+Active Members =
+CALCULATE(
+    COUNTROWS( Members ),
+    Members[IsChurned] = "No"
+)
+
+Churned Members =
+CALCULATE(
+    COUNTROWS( Members ),
+    Members[IsChurned] = "Yes"
+)
+
+New Members (Period) =
+CALCULATE(
+    COUNTROWS( Members ),
+    USERELATIONSHIP( Members[SignupDate], dim_Date[Date] )
+)
+
+
+// =============================================================================
+// SECTION 2 — CHURN RATE
+// =============================================================================
+
+// Overall churn rate across all time
+Churn Rate % =
+DIVIDE(
+    [Churned Members],
+    [Total Members],
+    0
+) * 100
+
+// Churn rate formatted as text for KPI card
+Churn Rate Label =
+FORMAT( [Churn Rate %] / 100, "0.0%" )
+
+// Monthly churn rate — churned in selected month / active at start of month
+Monthly Churn Rate % =
+VAR ChurnedThisMonth =
+    CALCULATE(
+        COUNTROWS( Members ),
+        Members[IsChurned] = "Yes",
+        USERELATIONSHIP( Members[ChurnDate], dim_Date[Date] )
+    )
+VAR ActiveAtStart =
+    CALCULATE(
+        COUNTROWS( Members ),
+        Members[IsChurned] = "No"
+    ) + ChurnedThisMonth
+RETURN
+    DIVIDE( ChurnedThisMonth, ActiveAtStart, 0 ) * 100
+
+// Rolling 3-month average churn rate
+Churn Rate 3M Avg % =
+AVERAGEX(
+    DATESINPERIOD( dim_Date[Date], LASTDATE( dim_Date[Date] ), -3, MONTH ),
+    [Monthly Churn Rate %]
+)
+
+
+// =============================================================================
+// SECTION 3 — REVENUE (MRR & LTV)
+// =============================================================================
+
+// Monthly Recurring Revenue from active members only
+MRR =
+CALCULATE(
+    SUMX( Members, Members[MonthlyFee] ),
+    Members[IsChurned] = "No"
+)
+
+// Monthly revenue lost from churned members
+MRR Lost to Churn =
+CALCULATE(
+    SUMX( Members, Members[MonthlyFee] ),
+    Members[IsChurned] = "Yes"
+)
+
+// Annual run-rate revenue
+ARR =
+[MRR] * 12
+
+// Average revenue per active member
+ARPU =
+DIVIDE( [MRR], [Active Members], 0 )
+
+// Estimated Customer Lifetime Value
+// LTV = ARPU / Monthly Churn Rate
+LTV (Estimated) =
+VAR MonthlyRate = DIVIDE( [Churn Rate %], 100, 0 )
+RETURN
+    DIVIDE( [ARPU], MonthlyRate, 0 )
+
+// Total revenue collected (fee × tenure) across all members
+Total Revenue Collected =
+SUMX( Members, Members[MonthlyFee] * Members[TenureMonths] )
+
+// Revenue lost: what churned members would have generated in next 12 months
+Revenue Lost Annualised =
+[MRR Lost to Churn] * 12
+
+
+// =============================================================================
+// SECTION 4 — TENURE & ENGAGEMENT
+// =============================================================================
+
+Avg Tenure Months =
+AVERAGEX( Members, Members[TenureMonths] )
+
+Avg Tenure (Active) =
+CALCULATE(
+    AVERAGEX( Members, Members[TenureMonths] ),
+    Members[IsChurned] = "No"
+)
+
+Avg Tenure (Churned) =
+CALCULATE(
+    AVERAGEX( Members, Members[TenureMonths] ),
+    Members[IsChurned] = "Yes"
+)
+
+Avg Monthly Visits =
+AVERAGEX( Members, Members[AvgMonthlyVisits] )
+
+Avg Days Since Last Visit =
+AVERAGEX( Members, Members[LastVisitDaysAgo] )
+
+// Engagement score: normalised 0–100 (visits weighted)
+Engagement Score =
+DIVIDE(
+    AVERAGEX( Members, Members[AvgMonthlyVisits] ),
+    20,       -- max expected visits per month
+    0
+) * 100
+
+
+// =============================================================================
+// SECTION 5 — SATISFACTION & NPS
+// =============================================================================
+
+Avg Satisfaction Score =
+AVERAGEX( Members, Members[SatisfactionScore] )
+
+Avg NPS Score =
+AVERAGEX( Members, Members[NPSScore] )
+
+// NPS bucket counts
+NPS Promoters =
+CALCULATE(
+    COUNTROWS( Members ),
+    Members[NPSScore] >= 9
+)
+
+NPS Passives =
+CALCULATE(
+    COUNTROWS( Members ),
+    Members[NPSScore] >= 7,
+    Members[NPSScore] <= 8
+)
+
+NPS Detractors =
+CALCULATE(
+    COUNTROWS( Members ),
+    Members[NPSScore] <= 6
+)
+
+// Net Promoter Score = %Promoters − %Detractors
+Net Promoter Score =
+DIVIDE( [NPS Promoters] - [NPS Detractors], [Total Members], 0 ) * 100
+
+// Satisfaction trend: current period vs prior period
+Satisfaction vs Prior Period =
+VAR CurrentSat = [Avg Satisfaction Score]
+VAR PriorSat =
+    CALCULATE(
+        AVERAGEX( Members, Members[SatisfactionScore] ),
+        PREVIOUSMONTH( dim_Date[Date] )
+    )
+RETURN
+    CurrentSat - PriorSat
+
+
+// =============================================================================
+// SECTION 6 — AT-RISK MEMBERS
+// =============================================================================
+
+// Count of active members flagged High Risk
+High Risk Members =
+CALCULATE(
+    COUNTROWS( Members ),
+    Members[IsChurned] = "No",
+    Members[RiskTier] = "High Risk"
+)
+
+Medium Risk Members =
+CALCULATE(
+    COUNTROWS( Members ),
+    Members[IsChurned] = "No",
+    Members[RiskTier] = "Medium Risk"
+)
+
+// Revenue at risk (High Risk members × their monthly fee)
+MRR at Risk =
+CALCULATE(
+    SUMX( Members, Members[MonthlyFee] ),
+    Members[IsChurned] = "No",
+    Members[RiskTier] = "High Risk"
+)
+
+// % of active base that is high risk
+At-Risk % =
+DIVIDE( [High Risk Members], [Active Members], 0 ) * 100
+
+
+// =============================================================================
+// SECTION 7 — COHORT RETENTION
+// =============================================================================
+
+// Members who signed up in the selected cohort period
+Cohort Size =
+CALCULATE(
+    COUNTROWS( Members ),
+    USERELATIONSHIP( Members[SignupDate], dim_Date[Date] )
+)
+
+// Active members from that cohort (still retained)
+Cohort Retained =
+CALCULATE(
+    COUNTROWS( Members ),
+    Members[IsChurned] = "No",
+    USERELATIONSHIP( Members[SignupDate], dim_Date[Date] )
+)
+
+// Retention % for the cohort
+Cohort Retention % =
+DIVIDE( [Cohort Retained], [Cohort Size], 0 ) * 100
+
+
+// =============================================================================
+// SECTION 8 — PERIOD-OVER-PERIOD COMPARISONS
+// =============================================================================
+
+// Churn this month vs last month
+Churn MoM Change =
+VAR ThisMonth  = [Churned Members]
+VAR LastMonth  =
+    CALCULATE(
+        [Churned Members],
+        PREVIOUSMONTH( dim_Date[Date] )
+    )
+RETURN
+    ThisMonth - LastMonth
+
+Churn MoM Change % =
+VAR ThisMonth  = [Churned Members]
+VAR LastMonth  =
+    CALCULATE(
+        [Churned Members],
+        PREVIOUSMONTH( dim_Date[Date] )
+    )
+RETURN
+    DIVIDE( ThisMonth - LastMonth, LastMonth, 0 ) * 100
+
+// MRR vs prior month
+MRR MoM Change =
+[MRR] -
+CALCULATE( [MRR], PREVIOUSMONTH( dim_Date[Date] ) )
+
+// Year-to-date churn count
+YTD Churned =
+CALCULATE(
+    [Churned Members],
+    DATESYTD( dim_Date[Date] )
+)
+
+// Year-to-date MRR collected (cumulative)
+YTD Revenue =
+CALCULATE(
+    [Total Revenue Collected],
+    DATESYTD( dim_Date[Date] )
+)
+
+
+// =============================================================================
+// SECTION 9 — PAYMENT HEALTH
+// =============================================================================
+
+Avg Payment Failures =
+AVERAGEX( Members, Members[PaymentFailures] )
+
+Members with Payment Issues =
+CALCULATE(
+    COUNTROWS( Members ),
+    Members[PaymentFailures] > 0
+)
+
+Payment Failure Rate % =
+DIVIDE( [Members with Payment Issues], [Total Members], 0 ) * 100
+
+
+// =============================================================================
+// SECTION 10 — DYNAMIC TITLE HELPERS (for report visuals)
+// =============================================================================
+
+// Use in visual Title field to show selected filter context
+Selected Plan =
+IF(
+    ISFILTERED( Members[MembershipPlan] ),
+    SELECTEDVALUE( Members[MembershipPlan], "Multiple Plans" ),
+    "All Plans"
+)
+
+Selected Location =
+IF(
+    ISFILTERED( Members[HomeLocation] ),
+    SELECTEDVALUE( Members[HomeLocation], "Multiple Locations" ),
+    "All Locations"
+)
+
+Report Subtitle =
+"FitCore Gym  |  " & [Selected Plan] & "  |  " & [Selected Location]
