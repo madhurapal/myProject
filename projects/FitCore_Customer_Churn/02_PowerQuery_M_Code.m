@@ -145,8 +145,8 @@ in
 // TABLE 3: dim_Date (generated in Power Query — no source file needed)
 // =============================================================================
 let
-    StartDate  = #date(2022, 1, 1),
-    EndDate    = #date(2026, 12, 31),
+    StartDate  = #date(2023, 10, 1),
+    EndDate    = #date(2025, 4, 30),
     DateCount  = Duration.Days(EndDate - StartDate) + 1,
     DateList   = List.Dates(StartDate, DateCount, #duration(1, 0, 0, 0)),
     DateTable  = Table.FromList(DateList, Splitter.SplitByNothing(), {"Date"}),

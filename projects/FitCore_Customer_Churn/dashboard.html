@@ -7,24 +7,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #0f1117;
-    --card: #1a1d27;
-    --card2: #1e2130;
-    --border: #2a2d3e;
-    --text: #e2e8f0;
-    --muted: #8892a4;
-    --blue: #4f8ef7;
-    --green: #34d399;
-    --red: #f87171;
-    --orange: #fb923c;
-    --purple: #a78bfa;
-    --yellow: #fbbf24;
-    --teal: #2dd4bf;
+    --bg: #0f1117; --card: #1a1d27; --card2: #1e2130; --border: #2a2d3e;
+    --text: #e2e8f0; --muted: #8892a4;
+    --blue: #4f8ef7; --green: #34d399; --red: #f87171;
+    --orange: #fb923c; --purple: #a78bfa; --yellow: #fbbf24; --teal: #2dd4bf;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
 
-  /* ── Header ── */
   .header { background: linear-gradient(135deg, #1a1d27 0%, #0f1117 100%); border-bottom: 1px solid var(--border); padding: 18px 28px; display: flex; align-items: center; justify-content: space-between; }
   .header-logo { display: flex; align-items: center; gap: 14px; }
   .logo-icon { width: 44px; height: 44px; background: linear-gradient(135deg, var(--blue), var(--purple)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
@@ -33,18 +23,15 @@
   .header-meta { text-align: right; font-size: 12px; color: var(--muted); }
   .header-meta strong { color: var(--text); }
 
-  /* ── Nav tabs ── */
-  .nav { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; gap: 4px; }
+  .nav { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; gap: 4px; overflow-x: auto; }
   .tab { padding: 12px 18px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all .2s; white-space: nowrap; }
   .tab:hover { color: var(--text); }
   .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
 
-  /* ── Layout ── */
   .page { display: none; padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
   .page.active { display: block; }
 
-  /* ── KPI cards ── */
-  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 16px; margin-bottom: 24px; }
   .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
   .kpi-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
   .kpi-value { font-size: 28px; font-weight: 700; line-height: 1; }
@@ -53,7 +40,6 @@
   .badge-up { background: rgba(248,113,113,.15); color: var(--red); }
   .badge-down { background: rgba(52,211,153,.15); color: var(--green); }
 
-  /* ── Chart cards ── */
   .chart-grid { display: grid; gap: 20px; }
   .grid-2 { grid-template-columns: 1fr 1fr; }
   .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
@@ -65,7 +51,6 @@
   .chart-wrap canvas { max-height: 260px; }
   .chart-wrap.tall canvas { max-height: 340px; }
 
-  /* ── Table ── */
   .tbl-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { background: var(--card2); color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -75,345 +60,443 @@
   .tier-medium { background: rgba(251,191,36,.12);  color: #fcd34d; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
   .tier-low    { background: rgba(52,211,153,.12);  color: #6ee7b7; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 
-  /* ── Heatmap ── */
-  .heatmap-grid { display: grid; gap: 4px; }
-  .hm-row { display: grid; gap: 4px; align-items: center; }
-  .hm-cell { height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; }
-  .hm-label { font-size: 12px; color: var(--muted); padding-right: 8px; white-space: nowrap; }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 
-  /* ── Section label ── */
-  .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--blue); margin: 24px 0 12px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+  .bar-label { min-width: 130px; color: var(--muted); }
+  .bar-track { flex: 1; background: var(--card2); border-radius: 4px; height: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+  .bar-val { min-width: 44px; text-align: right; font-weight: 600; }
 
-  /* ── Scrollbar ── */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-  @media (max-width: 900px) {
-    .grid-2, .grid-3, .grid-12 { grid-template-columns: 1fr; }
-    .nav { overflow-x: auto; }
-  }
+  @media (max-width: 900px) { .grid-2,.grid-3,.grid-12 { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
-<!-- Header -->
 <div class="header">
   <div class="header-logo">
     <div class="logo-icon">🏋️</div>
     <div>
-      <h1>FitCore Gym</h1>
-      <div class="header-sub">Customer Churn Analytics Dashboard · FY2022–2026</div>
+      <h1>FitCore Gym Analytics</h1>
+      <div class="header-sub">Customer Churn Analysis · Oct 2023 – Apr 2025</div>
     </div>
   </div>
   <div class="header-meta">
-    <div><strong>3,000</strong> Members Analysed</div>
-    <div>Data as of June 2026</div>
+    <div><strong>1,047</strong> Members · 6 Locations</div>
+    <div>Data Period: Oct 2023 – Apr 2025</div>
   </div>
 </div>
 
-<!-- Nav -->
-<div class="nav">
-  <div class="tab active" onclick="showPage('summary')">📊 Executive Summary</div>
+<nav class="nav">
+  <div class="tab active" onclick="showPage('exec')">📊 Executive Summary</div>
   <div class="tab" onclick="showPage('drivers')">🔍 Churn Drivers</div>
   <div class="tab" onclick="showPage('engagement')">💪 Engagement</div>
-  <div class="tab" onclick="showPage('watchlist')">⚠️ At-Risk Watchlist</div>
+  <div class="tab" onclick="showPage('risk')">⚠️ At-Risk Watchlist</div>
   <div class="tab" onclick="showPage('revenue')">💰 Revenue Impact</div>
-</div>
+</nav>
 
-<!-- ══════════════════════════════════════════════════════════ PAGE 1 ══ -->
-<div id="page-summary" class="page active">
-
-  <!-- KPIs -->
+<!-- ══════════════════════════════════════════════════════════
+     PAGE 1 — Executive Summary
+════════════════════════════════════════════════════════════ -->
+<div id="page-exec" class="page active">
   <div class="kpi-grid">
     <div class="kpi">
       <div class="kpi-label">Total Members</div>
-      <div class="kpi-value" style="color:var(--blue)">3,000</div>
-      <div class="kpi-sub">FY2022 – FY2026</div>
+      <div class="kpi-value" style="color:var(--blue)">1,047</div>
+      <div class="kpi-sub">Local fitness centre · 6 branches</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Active Members</div>
-      <div class="kpi-value" style="color:var(--green)">2,537</div>
-      <div class="kpi-sub">84.6% retention</div>
+      <div class="kpi-value" style="color:var(--green)">813</div>
+      <div class="kpi-sub">77.7% retention rate</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Churned Members</div>
-      <div class="kpi-value" style="color:var(--red)">463</div>
-      <div class="kpi-badge badge-up">↑ 15.4% churn rate</div>
+      <div class="kpi-value" style="color:var(--red)">234</div>
+      <div class="kpi-badge badge-up">▲ 22.3% churn rate</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Monthly MRR</div>
-      <div class="kpi-value" style="color:var(--yellow)">$116K</div>
-      <div class="kpi-sub">Active members only</div>
+      <div class="kpi-value" style="color:var(--yellow)">$37.4K</div>
+      <div class="kpi-sub">$449K projected ARR</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Avg Satisfaction</div>
-      <div class="kpi-value" style="color:var(--teal)">3.79</div>
-      <div class="kpi-sub">Out of 5.0</div>
+      <div class="kpi-value" style="color:var(--orange)">3.71</div>
+      <div class="kpi-sub">Out of 5.0 · needs improvement</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Net Promoter Score</div>
-      <div class="kpi-value" style="color:var(--purple)">52.3</div>
-      <div class="kpi-sub">Industry avg: 45–55</div>
+      <div class="kpi-value" style="color:var(--teal)">42</div>
+      <div class="kpi-sub">Good · industry avg ~39</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Avg Tenure</div>
-      <div class="kpi-value" style="color:var(--orange)">28.7</div>
-      <div class="kpi-sub">Months per member</div>
+      <div class="kpi-value" style="color:var(--purple)">9.1</div>
+      <div class="kpi-sub">months per member</div>
     </div>
   </div>
 
   <div class="chart-grid grid-12" style="margin-bottom:20px">
     <div class="card">
       <div class="card-title">Monthly Churn Trend</div>
-      <div class="card-sub">Number of members who cancelled each month · 2023–2026</div>
-      <div class="chart-wrap tall"><canvas id="churnTrend"></canvas></div>
+      <div class="card-sub">Number of members churning each month (Dec 2023 – Apr 2025)</div>
+      <div class="chart-wrap"><canvas id="chMonthly"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">Churn Rate by Year</div>
-      <div class="card-sub">Annual churn acceleration</div>
-      <div class="chart-wrap"><canvas id="churnYear"></canvas></div>
+      <div class="card-title">Member Status Distribution</div>
+      <div class="card-sub">Active vs Churned across all 1,047 members</div>
+      <div class="chart-wrap"><canvas id="chStatus"></canvas></div>
     </div>
   </div>
 
-  <div class="chart-grid grid-2">
-    <div class="card">
-      <div class="card-title">Members by Age Group</div>
-      <div class="card-sub">Distribution with churn rate overlay</div>
-      <div class="chart-wrap"><canvas id="ageChart"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Membership Plan Mix</div>
-      <div class="card-sub">Active member distribution by plan</div>
-      <div class="chart-wrap"><canvas id="planMix"></canvas></div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════ PAGE 2 ══ -->
-<div id="page-drivers" class="page">
-  <div class="chart-grid grid-2" style="margin-bottom:20px">
-    <div class="card">
-      <div class="card-title">Churn Rate by Membership Plan</div>
-      <div class="card-sub">Standard plan has the highest dropout rate</div>
-      <div class="chart-wrap"><canvas id="churnPlan"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Churn Reasons Breakdown</div>
-      <div class="card-sub">Why members are cancelling</div>
-      <div class="chart-wrap"><canvas id="churnReasons"></canvas></div>
-    </div>
-  </div>
   <div class="chart-grid grid-2">
     <div class="card">
       <div class="card-title">Churn Rate by Location</div>
-      <div class="card-sub">Southpark branch has highest churn</div>
-      <div class="chart-wrap"><canvas id="churnLoc"></canvas></div>
+      <div class="card-sub">Southpark leads at 26.8%; Westside lowest at 18.7%</div>
+      <div class="chart-wrap"><canvas id="chLoc"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">Churn by Age Group & Gender</div>
-      <div class="card-sub">45–54 age group churns most frequently</div>
-      <div class="chart-wrap"><canvas id="ageGender"></canvas></div>
+      <div class="card-title">Churn Rate by Plan</div>
+      <div class="card-sub">Family plan has highest churn at 24.6%</div>
+      <div class="chart-wrap"><canvas id="chPlan"></canvas></div>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════ PAGE 3 ══ -->
+<!-- ══════════════════════════════════════════════════════════
+     PAGE 2 — Churn Drivers
+════════════════════════════════════════════════════════════ -->
+<div id="page-drivers" class="page">
+  <div class="chart-grid grid-2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-title">Churn Reasons</div>
+      <div class="card-sub">Top reasons members gave when cancelling</div>
+      <div class="chart-wrap"><canvas id="chReasons"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Churn Rate by Age Group</div>
+      <div class="card-sub">45–54 segment churns most at 27.4%</div>
+      <div class="chart-wrap"><canvas id="chAge"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-grid grid-2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-title">Payment Failures vs Churn Rate</div>
+      <div class="card-sub">Members with 2+ payment failures churn at 60–100%</div>
+      <div class="chart-wrap"><canvas id="chPayFail"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tenure Band — Churn Rate</div>
+      <div class="card-sub">55.9% of members churn within first 3 months</div>
+      <div class="chart-wrap"><canvas id="chTenure"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Churn Signal Heatmap</div>
+    <div class="card-sub">How each risk factor individually drives churn rate (%)</div>
+    <div style="margin-top:12px">
+      <div class="section-label">Visit Frequency</div>
+      <div class="bar-row"><div class="bar-label">0 visits/mo</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--red)"></div></div><div class="bar-val" style="color:var(--red)">100%</div></div>
+      <div class="bar-row"><div class="bar-label">1–4 visits/mo</div><div class="bar-track"><div class="bar-fill" style="width:65%;background:var(--orange)"></div></div><div class="bar-val" style="color:var(--orange)">65.1%</div></div>
+      <div class="bar-row"><div class="bar-label">5–8 visits/mo</div><div class="bar-track"><div class="bar-fill" style="width:13%;background:var(--yellow)"></div></div><div class="bar-val" style="color:var(--yellow)">13.0%</div></div>
+      <div class="bar-row"><div class="bar-label">9–12 visits/mo</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:var(--green)"></div></div><div class="bar-val" style="color:var(--green)">0.0%</div></div>
+      <div class="bar-row"><div class="bar-label">13+ visits/mo</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:var(--green)"></div></div><div class="bar-val" style="color:var(--green)">0.0%</div></div>
+      <div class="section-label" style="margin-top:18px">Payment Failures</div>
+      <div class="bar-row"><div class="bar-label">0 failures</div><div class="bar-track"><div class="bar-fill" style="width:11%;background:var(--green)"></div></div><div class="bar-val" style="color:var(--green)">10.6%</div></div>
+      <div class="bar-row"><div class="bar-label">1 failure</div><div class="bar-track"><div class="bar-fill" style="width:32%;background:var(--yellow)"></div></div><div class="bar-val" style="color:var(--yellow)">31.9%</div></div>
+      <div class="bar-row"><div class="bar-label">2 failures</div><div class="bar-track"><div class="bar-fill" style="width:60%;background:var(--orange)"></div></div><div class="bar-val" style="color:var(--orange)">59.8%</div></div>
+      <div class="bar-row"><div class="bar-label">3+ failures</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--red)"></div></div><div class="bar-val" style="color:var(--red)">100%</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PAGE 3 — Engagement
+════════════════════════════════════════════════════════════ -->
 <div id="page-engagement" class="page">
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Avg Monthly Visits</div>
+      <div class="kpi-value" style="color:var(--blue)">7.3</div>
+      <div class="kpi-sub">All members combined</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Zero-Visit Members</div>
+      <div class="kpi-value" style="color:var(--red)">10</div>
+      <div class="kpi-sub">100% churn rate</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Highly Engaged (9+)</div>
+      <div class="kpi-value" style="color:var(--green)">311</div>
+      <div class="kpi-sub">0% churn — loyal core</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">At-Risk Members</div>
+      <div class="kpi-value" style="color:var(--orange)">100</div>
+      <div class="kpi-sub">2 High · 98 Medium risk</div>
+    </div>
+  </div>
+
   <div class="chart-grid grid-2" style="margin-bottom:20px">
     <div class="card">
       <div class="card-title">Visit Frequency vs Churn Rate</div>
-      <div class="card-sub">Low visit frequency = significantly higher churn</div>
-      <div class="chart-wrap"><canvas id="visitChurn"></canvas></div>
+      <div class="card-sub">Clear inverse relationship — more visits = less churn</div>
+      <div class="chart-wrap"><canvas id="chVisits"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">Tenure Bucket vs Churn Rate</div>
-      <div class="card-sub">New members (0–6 months) are most at risk</div>
-      <div class="chart-wrap"><canvas id="tenureChurn"></canvas></div>
+      <div class="card-title">Member Distribution by Visit Band</div>
+      <div class="card-sub">Most members visit 5–8 times/month</div>
+      <div class="chart-wrap"><canvas id="chVisitDist"></canvas></div>
     </div>
   </div>
+
   <div class="chart-grid grid-2">
     <div class="card">
-      <div class="card-title">Satisfaction Score Distribution</div>
-      <div class="card-sub">Active vs. Churned member satisfaction</div>
-      <div class="chart-wrap"><canvas id="satDist"></canvas></div>
+      <div class="card-title">Cohort Retention by Signup Year</div>
+      <div class="card-sub">2023 cohort churned at 15.2% · 2024 at 23.2%</div>
+      <div class="chart-wrap"><canvas id="chCohort"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">Payment Failures vs Churn</div>
-      <div class="card-sub">Payment issues strongly predict cancellation</div>
-      <div class="chart-wrap"><canvas id="paymentChurn"></canvas></div>
+      <div class="card-title">Tenure Band Distribution</div>
+      <div class="card-sub">Early churn is the biggest risk — 55.9% in first 3 months</div>
+      <div class="chart-wrap tall"><canvas id="chTenureDist"></canvas></div>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════ PAGE 4 ══ -->
-<div id="page-watchlist" class="page">
-  <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+<!-- ══════════════════════════════════════════════════════════
+     PAGE 4 — At-Risk Watchlist
+════════════════════════════════════════════════════════════ -->
+<div id="page-risk" class="page">
+  <div class="kpi-grid">
     <div class="kpi">
-      <div class="kpi-label">At-Risk Active Members</div>
-      <div class="kpi-value" style="color:var(--orange)">220</div>
-      <div class="kpi-sub">8.7% of active base</div>
+      <div class="kpi-label">High Risk Members</div>
+      <div class="kpi-value" style="color:var(--red)">2</div>
+      <div class="kpi-sub">Score ≥ 6 · immediate action</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Medium Risk Members</div>
+      <div class="kpi-value" style="color:var(--yellow)">98</div>
+      <div class="kpi-sub">Score 3–5 · monitor closely</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">MRR at Risk</div>
-      <div class="kpi-value" style="color:var(--red)">~$9.4K</div>
-      <div class="kpi-sub">Monthly recurring revenue</div>
+      <div class="kpi-value" style="color:var(--orange)">$4.1K</div>
+      <div class="kpi-sub">From at-risk active members</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Annualised Revenue Risk</div>
-      <div class="kpi-value" style="color:var(--red)">~$113K</div>
-      <div class="kpi-sub">If all at-risk members churn</div>
+      <div class="kpi-label">Risk Score Model</div>
+      <div class="kpi-value" style="color:var(--purple)">5</div>
+      <div class="kpi-sub">signals · max score 10</div>
     </div>
   </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title">Risk Scoring Model</div>
+    <div class="card-sub">Additive model — each signal contributes independently to the score</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px">
+      <div style="background:var(--card2);border-radius:8px;padding:14px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Visits ≤ 2/mo</div>
+        <div style="font-size:20px;font-weight:700;color:var(--red)">+2 pts</div>
+      </div>
+      <div style="background:var(--card2);border-radius:8px;padding:14px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Satisfaction ≤ 2</div>
+        <div style="font-size:20px;font-weight:700;color:var(--red)">+3 pts</div>
+      </div>
+      <div style="background:var(--card2);border-radius:8px;padding:14px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Last Visit > 30 days</div>
+        <div style="font-size:20px;font-weight:700;color:var(--orange)">+1–2 pts</div>
+      </div>
+      <div style="background:var(--card2);border-radius:8px;padding:14px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Payment Failures ≥ 2</div>
+        <div style="font-size:20px;font-weight:700;color:var(--orange)">+2–3 pts</div>
+      </div>
+      <div style="background:var(--card2);border-radius:8px;padding:14px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">NPS &lt; 0</div>
+        <div style="font-size:20px;font-weight:700;color:var(--yellow)">+2 pts</div>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
-    <div class="card-title">At-Risk Member Watchlist</div>
-    <div class="card-sub">Active members with elevated churn risk signals · Priority by risk score</div>
-    <div class="tbl-wrap">
-      <table id="watchlistTable">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Member</th>
-            <th>Plan</th>
-            <th>Location</th>
-            <th>Monthly Fee</th>
-            <th>Avg Visits/mo</th>
-            <th>Last Visit</th>
-            <th>Satisfaction</th>
-            <th>Payment Failures</th>
-            <th>Risk Score</th>
-            <th>Risk Tier</th>
-          </tr>
-        </thead>
-        <tbody id="watchlistBody"></tbody>
+    <div class="card-title">Top 20 At-Risk Active Members</div>
+    <div class="card-sub">Sorted by risk score descending, then monthly fee</div>
+    <div class="tbl-wrap" style="margin-top:12px">
+      <table id="riskTable">
+        <thead><tr>
+          <th>#</th><th>Name</th><th>Plan</th><th>Location</th>
+          <th>Visits/mo</th><th>Last Visit</th><th>Satisfaction</th>
+          <th>Pay Fails</th><th>Score</th><th>Tier</th>
+        </tr></thead>
+        <tbody id="riskBody"></tbody>
       </table>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════ PAGE 5 ══ -->
+<!-- ══════════════════════════════════════════════════════════
+     PAGE 5 — Revenue Impact
+════════════════════════════════════════════════════════════ -->
 <div id="page-revenue" class="page">
   <div class="kpi-grid">
     <div class="kpi">
       <div class="kpi-label">Current MRR</div>
-      <div class="kpi-value" style="color:var(--green)">$116,155</div>
-      <div class="kpi-sub">Active members only</div>
+      <div class="kpi-value" style="color:var(--green)">$37.4K</div>
+      <div class="kpi-sub">813 active members</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">MRR Lost to Churn</div>
-      <div class="kpi-value" style="color:var(--red)">$21,091</div>
-      <div class="kpi-sub">Per month from churned</div>
+      <div class="kpi-label">Projected ARR</div>
+      <div class="kpi-value" style="color:var(--blue)">$448K</div>
+      <div class="kpi-sub">$37,397 × 12</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Annual Revenue Lost</div>
-      <div class="kpi-value" style="color:var(--red)">$253K</div>
-      <div class="kpi-sub">Annualised churn impact</div>
+      <div class="kpi-label">Lost Revenue (annual)</div>
+      <div class="kpi-value" style="color:var(--red)">$107K</div>
+      <div class="kpi-sub">234 churned × avg $38/mo × 12</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Avg LTV (Active)</div>
-      <div class="kpi-value" style="color:var(--blue)">$1,323</div>
-      <div class="kpi-sub">Avg fee × avg tenure</div>
+      <div class="kpi-label">Avg Revenue Per User</div>
+      <div class="kpi-value" style="color:var(--purple)">$46.00</div>
+      <div class="kpi-sub">MRR / active members</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Estimated LTV</div>
+      <div class="kpi-value" style="color:var(--teal)">$207</div>
+      <div class="kpi-sub">ARPU / monthly churn rate</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Revenue Recovery Opp.</div>
-      <div class="kpi-value" style="color:var(--yellow)">$50K</div>
-      <div class="kpi-sub">Saving 20% of at-risk</div>
+      <div class="kpi-value" style="color:var(--orange)">$23K</div>
+      <div class="kpi-sub">If churn reduced by 10%</div>
     </div>
   </div>
 
-  <div class="chart-grid grid-12" style="margin-bottom:20px">
+  <div class="chart-grid grid-2" style="margin-bottom:20px">
     <div class="card">
-      <div class="card-title">Monthly Revenue Lost to Churn</div>
-      <div class="card-sub">Cumulative MRR lost as churn accelerates · 2024–2026</div>
-      <div class="chart-wrap tall"><canvas id="revenueChurn"></canvas></div>
+      <div class="card-title">MRR by Membership Plan</div>
+      <div class="card-sub">Standard plan generates most revenue at $11,437/mo</div>
+      <div class="chart-wrap"><canvas id="chRevPlan"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">Revenue by Membership Plan</div>
-      <div class="card-sub">Active MRR contribution per tier</div>
-      <div class="chart-wrap"><canvas id="revPlan"></canvas></div>
+      <div class="card-title">Revenue Share by Plan</div>
+      <div class="card-sub">Standard + Family = 59% of total MRR</div>
+      <div class="chart-wrap"><canvas id="chRevPie"></canvas></div>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-title">LTV by Plan vs Churn Rate</div>
-    <div class="card-sub">Higher churn rate erodes lifetime value — Standard plan worst case</div>
-    <div class="chart-wrap"><canvas id="ltvPlan"></canvas></div>
+    <div class="card-title">Revenue Lost by Churn Reason</div>
+    <div class="card-sub">Estimated annualised revenue lost per churn reason (avg $38/mo per member)</div>
+    <div class="chart-wrap" style="margin-top:12px"><canvas id="chRevLost"></canvas></div>
   </div>
 </div>
 
+<!-- ═══════════════════════ SCRIPTS ═══════════════════════ -->
 <script>
-// ── Data ────────────────────────────────────────────────────────────────────
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// ── Data ─────────────────────────────────────────────────
+const TOTAL = 1047, ACTIVE = 813, CHURNED = 234;
+const CHURN_RATE = 22.3, MRR = 37397;
 
-// Real data extracted from FitCore_Churn_Data.xlsx
 const monthlyChurn = {
-  '2023-01':2,'2023-02':1,'2023-05':5,'2023-06':4,'2023-07':2,
-  '2023-08':3,'2023-09':5,'2023-10':4,'2023-11':5,'2023-12':3,
-  '2024-01':4,'2024-02':3,'2024-03':5,'2024-04':6,'2024-05':8,
-  '2024-06':10,'2024-07':7,'2024-08':5,'2024-09':7,'2024-10':6,
-  '2024-11':7,'2024-12':6,
-  '2025-01':7,'2025-02':15,'2025-03':12,'2025-04':14,'2025-05':5,
-  '2025-06':15,'2025-07':24,'2025-08':14,'2025-09':16,'2025-10':15,
-  '2025-11':13,'2025-12':24,
-  '2026-01':24,'2026-02':31,'2026-03':34,'2026-04':29,'2026-05':39,'2026-06':16
+  labels: ['Dec-23','Jan-24','Feb-24','Mar-24','Apr-24','May-24','Jun-24',
+           'Jul-24','Aug-24','Sep-24','Oct-24','Nov-24','Dec-24',
+           'Jan-25','Feb-25','Mar-25','Apr-25'],
+  data:   [1,1,3,4,2,8,4,8,5,10,14,12,14,23,30,43,52]
 };
 
-// Fill missing months
-const allMonths = [];
-for (let y = 2023; y <= 2026; y++) {
-  const end = (y === 2026) ? 6 : 12;
-  for (let m = 1; m <= end; m++) {
-    const key = `${y}-${String(m).padStart(2,'0')}`;
-    allMonths.push({ label: `${MONTHS[m-1]} ${y}`, value: monthlyChurn[key] || 0 });
-  }
-}
+const planData = {
+  labels: ['Standard','Basic','Premium','Family'],
+  total:  [372, 298, 202, 175],
+  churned:[86,  61,  44,  43],
+  rate:   [23.1, 20.5, 21.8, 24.6]
+};
 
-// Revenue lost per month (avg churn × avg fee ~$45.55)
-const avgFeeChurned = 45.55;
-const revLost = allMonths.filter(m => m.label.includes('2024') || m.label.includes('2025') || m.label.includes('2026'))
-  .map(m => ({ label: m.label, value: Math.round(m.value * avgFeeChurned) }));
+const locData = {
+  labels:  ['Southpark','North Hills','Downtown','Midtown','Eastgate','Westside'],
+  total:   [168, 151, 196, 164, 186, 182],
+  churned: [45,  38,  43,  35,  39,  34],
+  rate:    [26.8, 25.2, 21.9, 21.3, 21.0, 18.7]
+};
 
-const atRiskData = [
-  {name:'Jessica Moore',plan:'Family',loc:'Westside',fee:79.99,visits:2,last:8,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Sophie Jackson',plan:'Family',loc:'Eastgate',fee:79.99,visits:1,last:16,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Jessica Harris',plan:'Family',loc:'Midtown',fee:79.99,visits:2,last:28,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Kevin Anderson',plan:'Family',loc:'North Hills',fee:79.99,visits:2,last:15,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Daniel Taylor',plan:'Family',loc:'Midtown',fee:79.99,visits:2,last:5,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'William Young',plan:'Family',loc:'Westside',fee:79.99,visits:2,last:29,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Sophie Johnson',plan:'Family',loc:'Southpark',fee:79.99,visits:1,last:6,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Ryan Martin',plan:'Premium',loc:'Southpark',fee:59.99,visits:1,last:12,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Jessica Martin',plan:'Premium',loc:'Westside',fee:59.99,visits:2,last:21,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Michael Hall',plan:'Premium',loc:'Downtown',fee:59.99,visits:1,last:6,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Brian Williams',plan:'Premium',loc:'Westside',fee:59.99,visits:2,last:14,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Michael Martin',plan:'Premium',loc:'Southpark',fee:59.99,visits:1,last:24,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Kevin Moore',plan:'Premium',loc:'Southpark',fee:59.99,visits:1,last:30,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Robert Davis',plan:'Standard',loc:'Midtown',fee:39.99,visits:2,last:18,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Robert Johnson',plan:'Standard',loc:'Southpark',fee:39.99,visits:1,last:16,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Jessica Williams',plan:'Standard',loc:'Downtown',fee:39.99,visits:2,last:13,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'James Hall',plan:'Standard',loc:'Westside',fee:39.99,visits:2,last:10,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Ryan Taylor',plan:'Standard',loc:'Midtown',fee:39.99,visits:2,last:28,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Michael Garcia',plan:'Standard',loc:'Downtown',fee:39.99,visits:2,last:18,sat:3,pf:1,score:4,tier:'Medium'},
-  {name:'Robert Davis',plan:'Standard',loc:'North Hills',fee:39.99,visits:2,last:29,sat:3,pf:1,score:4,tier:'Medium'},
+const reasons = {
+  labels: ['Unknown','Moved Away','Injury/Health','Work Schedule','Temp Pause',
+           'Too Expensive','Poor Facilities','Bad Cust Svc','Competitor','Low Motivation'],
+  data:   [28, 27, 27, 25, 25, 24, 24, 21, 17, 16]
+};
+
+const ageData = {
+  labels: ['18-24','25-34','35-44','45-54','55+'],
+  total:  [233, 203, 212, 197, 202],
+  rate:   [19.3, 17.7, 25.0, 27.4, 22.8]
+};
+
+const payFailData = {
+  labels: ['0 failures','1 failure','2 failures','3 failures','4 failures'],
+  rate:   [10.6, 31.9, 59.8, 100.0, 100.0]
+};
+
+const tenureData = {
+  labels: ['0–3 mo','4–6 mo','7–12 mo','13–24 mo'],
+  total:  [177, 207, 362, 301],
+  churned:[99,  68,  55,  12],
+  rate:   [55.9, 32.9, 15.2, 4.0]
+};
+
+const visitData = {
+  labels: ['0','1-4','5-8','9-12','13+'],
+  total:  [10,  249, 477, 257,  54],
+  rate:   [100, 65.1,13.0, 0.0, 0.0]
+};
+
+const cohortData = {
+  labels: ['2023 Cohort','2024 Cohort','2025 Cohort'],
+  total:  [171, 768, 108],
+  churned:[26,  178, 30],
+  rate:   [15.2, 23.2, 27.8]
+};
+
+const revPlan = {
+  labels: ['Standard','Family','Premium','Basic'],
+  mrr:    [11437, 10559, 9478, 5923]
+};
+
+const atRisk = [
+  {name:'Jessica King',    plan:'Basic',    loc:'Westside',    visits:1,  last:7,  sat:2, pf:2, score:8, tier:'High'},
+  {name:'Joshua Lewis',    plan:'Basic',    loc:'North Hills', visits:6,  last:20, sat:2, pf:2, score:6, tier:'High'},
+  {name:'Justin Davis',    plan:'Basic',    loc:'Midtown',     visits:3,  last:6,  sat:3, pf:2, score:5, tier:'Medium'},
+  {name:'Brian Smith',     plan:'Basic',    loc:'North Hills', visits:3,  last:23, sat:2, pf:1, score:5, tier:'Medium'},
+  {name:'Daniel Martinez', plan:'Family',   loc:'Eastgate',    visits:4,  last:4,  sat:2, pf:0, score:4, tier:'Medium'},
+  {name:'Megan Jackson',   plan:'Family',   loc:'Eastgate',    visits:8,  last:3,  sat:3, pf:2, score:4, tier:'Medium'},
+  {name:'Emma Thomas',     plan:'Premium',  loc:'North Hills', visits:10, last:10, sat:3, pf:2, score:4, tier:'Medium'},
+  {name:'Brian Lee',       plan:'Premium',  loc:'Midtown',     visits:10, last:28, sat:2, pf:1, score:4, tier:'Medium'},
+  {name:'Michael Garcia',  plan:'Premium',  loc:'Southpark',   visits:7,  last:14, sat:2, pf:1, score:4, tier:'Medium'},
+  {name:'Justin Hernandez',plan:'Premium',  loc:'Southpark',   visits:6,  last:20, sat:1, pf:1, score:4, tier:'Medium'},
+  {name:'Tyler Taylor',    plan:'Premium',  loc:'Westside',    visits:8,  last:18, sat:2, pf:1, score:4, tier:'Medium'},
+  {name:'David Smith',     plan:'Premium',  loc:'North Hills', visits:4,  last:7,  sat:4, pf:2, score:4, tier:'Medium'},
+  {name:'Ashley Allen',    plan:'Premium',  loc:'Midtown',     visits:4,  last:25, sat:2, pf:0, score:4, tier:'Medium'},
+  {name:'Robert Harris',   plan:'Premium',  loc:'Downtown',    visits:6,  last:2,  sat:1, pf:1, score:4, tier:'Medium'},
+  {name:'Lauren Martinez', plan:'Premium',  loc:'Midtown',     visits:9,  last:27, sat:3, pf:2, score:4, tier:'Medium'},
+  {name:'Jessica Johnson', plan:'Standard', loc:'North Hills', visits:10, last:10, sat:2, pf:1, score:4, tier:'Medium'},
+  {name:'Megan Robinson',  plan:'Standard', loc:'Southpark',   visits:5,  last:18, sat:3, pf:2, score:4, tier:'Medium'},
+  {name:'Lauren Williams', plan:'Standard', loc:'North Hills', visits:3,  last:8,  sat:2, pf:0, score:4, tier:'Medium'},
+  {name:'Andrew Taylor',   plan:'Standard', loc:'Southpark',   visits:10, last:23, sat:1, pf:1, score:4, tier:'Medium'},
+  {name:'Sarah Walker',    plan:'Standard', loc:'Southpark',   visits:4,  last:9,  sat:2, pf:0, score:4, tier:'Medium'},
 ];
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-const gridOpts = {
-  color: 'rgba(255,255,255,0.05)',
-  drawBorder: false,
+// ── Helpers ───────────────────────────────────────────────
+const C = (id) => document.getElementById(id).getContext('2d');
+const COLORS = ['#4f8ef7','#34d399','#fb923c','#a78bfa','#f87171','#fbbf24','#2dd4bf'];
+const grid = { color: 'rgba(255,255,255,.06)' };
+const tickStyle = { color: '#8892a4', font: { size: 11 } };
+const legend = { labels: { color: '#e2e8f0', font: { size: 11 }, padding: 16 } };
+const tooltip = {
+  backgroundColor: '#1e2130', borderColor: '#2a2d3e', borderWidth: 1,
+  titleColor: '#e2e8f0', bodyColor: '#8892a4', padding: 10
 };
-const defaultFont = { family: "'Segoe UI', system-ui, sans-serif", size: 12 };
-Chart.defaults.color = '#8892a4';
-Chart.defaults.font = defaultFont;
-Chart.defaults.plugins.legend.labels.boxWidth = 12;
-Chart.defaults.plugins.legend.labels.padding = 16;
-Chart.defaults.plugins.tooltip.backgroundColor = '#1e2130';
-Chart.defaults.plugins.tooltip.borderColor = '#2a2d3e';
-Chart.defaults.plugins.tooltip.borderWidth = 1;
-Chart.defaults.plugins.tooltip.titleColor = '#e2e8f0';
-Chart.defaults.plugins.tooltip.bodyColor = '#8892a4';
-Chart.defaults.plugins.tooltip.padding = 10;
 
-// ── Page switch ──────────────────────────────────────────────────────────────
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -421,336 +504,182 @@ function showPage(id) {
   event.target.classList.add('active');
 }
 
-// ── Chart 1: Monthly Churn Trend ──────────────────────────────────────────
-new Chart(document.getElementById('churnTrend'), {
-  type: 'line',
-  data: {
-    labels: allMonths.map(m => m.label),
-    datasets: [{
-      label: 'Members Churned',
-      data: allMonths.map(m => m.value),
-      borderColor: '#f87171',
-      backgroundColor: 'rgba(248,113,113,0.08)',
-      borderWidth: 2.5,
-      tension: 0.4,
-      fill: true,
-      pointRadius: 2,
-      pointHoverRadius: 5,
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: gridOpts, ticks: { maxTicksLimit: 12, maxRotation: 45 } },
-      y: { grid: gridOpts, beginAtZero: true, ticks: { stepSize: 5 } }
-    }
-  }
-});
+// ── Charts ────────────────────────────────────────────────
 
-// ── Chart 2: Churn by Year ───────────────────────────────────────────────
-new Chart(document.getElementById('churnYear'), {
-  type: 'bar',
-  data: {
-    labels: ['2022', '2023', '2024', '2025', '2026 YTD'],
-    datasets: [{
-      label: 'Total Churned',
-      data: [8, 39, 74, 164, 173],
-      backgroundColor: ['rgba(79,142,247,.6)','rgba(79,142,247,.7)','rgba(251,146,60,.7)','rgba(248,113,113,.8)','rgba(248,113,113,.9)'],
-      borderRadius: 6,
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { display: false } },
-    scales: { x: { grid: {display:false} }, y: { grid: gridOpts, beginAtZero: true } }
-  }
-});
+// Monthly churn line
+new Chart(C('chMonthly'), { type:'line', data:{
+  labels: monthlyChurn.labels,
+  datasets:[{ label:'Churned Members', data: monthlyChurn.data,
+    borderColor:'#f87171', backgroundColor:'rgba(248,113,113,.12)',
+    fill:true, tension:.4, pointRadius:4, pointBackgroundColor:'#f87171' }]
+}, options:{ plugins:{legend:{display:false}, tooltip}, scales:{
+  x:{ grid, ticks: tickStyle }, y:{ grid, ticks: tickStyle, beginAtZero:true }
+}}});
 
-// ── Chart 3: Age Group ───────────────────────────────────────────────────
-new Chart(document.getElementById('ageChart'), {
-  type: 'bar',
-  data: {
-    labels: ['18–24', '25–34', '35–44', '45–54', '55+'],
-    datasets: [
-      { label: 'Active', data: [529,507,505,498,498], backgroundColor: 'rgba(52,211,153,.7)', borderRadius: 4 },
-      { label: 'Churned', data: [78,76,105,109,95], backgroundColor: 'rgba(248,113,113,.7)', borderRadius: 4 }
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { position: 'top' } },
-    scales: { x: { stacked:false, grid:{display:false} }, y: { grid: gridOpts, beginAtZero: true } }
-  }
-});
+// Status doughnut
+new Chart(C('chStatus'), { type:'doughnut', data:{
+  labels:['Active (813)','Churned (234)'],
+  datasets:[{ data:[813,234], backgroundColor:['#34d399','#f87171'],
+    borderWidth:2, borderColor:'#1a1d27' }]
+}, options:{ plugins:{ legend, tooltip },
+  cutout:'65%'
+}});
 
-// ── Chart 4: Plan mix (doughnut) ─────────────────────────────────────────
-new Chart(document.getElementById('planMix'), {
-  type: 'doughnut',
-  data: {
-    labels: ['Standard (2,537)', 'Basic (888)', 'Premium (586)', 'Family (469)'],
-    datasets: [{
-      data: [883, 756, 494, 404],
-      backgroundColor: ['#4f8ef7','#34d399','#a78bfa','#fb923c'],
-      borderColor: '#1a1d27', borderWidth: 3,
-      hoverOffset: 8
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    cutout: '60%',
-    plugins: { legend: { position: 'right' } }
-  }
-});
+// Location bar
+new Chart(C('chLoc'), { type:'bar', data:{
+  labels: locData.labels,
+  datasets:[{ label:'Churn Rate (%)', data: locData.rate,
+    backgroundColor: locData.rate.map(r => r >= 25 ? '#f87171' : r >= 22 ? '#fb923c' : '#34d399'),
+    borderRadius:6 }]
+}, options:{ plugins:{legend:{display:false}, tooltip}, scales:{
+  x:{ grid:{display:false}, ticks: tickStyle },
+  y:{ grid, ticks: tickStyle, beginAtZero:true, max:35 }
+}}});
 
-// ── Chart 5: Churn by Plan ───────────────────────────────────────────────
-new Chart(document.getElementById('churnPlan'), {
-  type: 'bar',
-  data: {
-    labels: ['Standard', 'Premium', 'Basic', 'Family'],
-    datasets: [{
-      label: 'Churn Rate %',
-      data: [16.5, 15.7, 14.9, 13.9],
-      backgroundColor: ['#f87171','#fb923c','#fbbf24','#34d399'],
-      borderRadius: 6,
-    }]
-  },
-  options: {
-    indexAxis: 'y',
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: gridOpts, beginAtZero: true, max: 20, ticks: { callback: v => v+'%' } },
-      y: { grid: { display: false } }
-    }
-  }
-});
+// Plan bar
+new Chart(C('chPlan'), { type:'bar', data:{
+  labels: planData.labels,
+  datasets:[{ label:'Churn Rate (%)', data: planData.rate,
+    backgroundColor:['#4f8ef7','#fb923c','#a78bfa','#f87171'], borderRadius:6 }]
+}, options:{ plugins:{legend:{display:false}, tooltip}, scales:{
+  x:{ grid:{display:false}, ticks: tickStyle },
+  y:{ grid, ticks: tickStyle, beginAtZero:true, max:35 }
+}}});
 
-// ── Chart 6: Churn Reasons ───────────────────────────────────────────────
-new Chart(document.getElementById('churnReasons'), {
-  type: 'doughnut',
-  data: {
-    labels: ['Too Expensive','Injury/Health','Work Schedule','Temp Pause','Moved Away','Competitor','Bad Service','Low Motivation','Poor Facilities','Other'],
-    datasets: [{
-      data: [52,50,48,48,48,46,42,39,35,55],
-      backgroundColor: ['#f87171','#fb923c','#fbbf24','#34d399','#4f8ef7','#a78bfa','#2dd4bf','#f472b6','#94a3b8','#64748b'],
-      borderColor: '#1a1d27', borderWidth: 2,
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    cutout: '55%',
-    plugins: { legend: { position: 'right', labels: { boxWidth:10, padding:8 } } }
-  }
-});
+// Churn reasons horizontal bar
+new Chart(C('chReasons'), { type:'bar', data:{
+  labels: reasons.labels,
+  datasets:[{ label:'Members', data: reasons.data,
+    backgroundColor: reasons.data.map((_,i) => COLORS[i % COLORS.length]),
+    borderRadius:4 }]
+}, options:{ indexAxis:'y', plugins:{legend:{display:false}, tooltip}, scales:{
+  x:{ grid, ticks: tickStyle },
+  y:{ grid:{display:false}, ticks: tickStyle }
+}}});
 
-// ── Chart 7: Churn by Location ───────────────────────────────────────────
-new Chart(document.getElementById('churnLoc'), {
-  type: 'bar',
-  data: {
-    labels: ['Southpark','Eastgate','North Hills','Westside','Downtown','Midtown'],
-    datasets: [{
-      label: 'Churn Rate %',
-      data: [16.2, 15.6, 15.6, 15.1, 15.0, 15.0],
-      backgroundColor: [
-        'rgba(248,113,113,.85)','rgba(251,146,60,.8)','rgba(251,146,60,.8)',
-        'rgba(251,191,36,.7)','rgba(52,211,153,.65)','rgba(52,211,153,.65)'
-      ],
-      borderRadius: 6,
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false } },
-      y: { grid: gridOpts, beginAtZero: false, min: 14, max: 17, ticks: { callback: v => v+'%' } }
-    }
-  }
-});
+// Age churn
+new Chart(C('chAge'), { type:'bar', data:{
+  labels: ageData.labels,
+  datasets:[{ label:'Churn Rate (%)', data: ageData.rate,
+    backgroundColor: ageData.rate.map(r => r >= 25 ? '#f87171' : r >= 20 ? '#fb923c' : '#34d399'),
+    borderRadius:6 }]
+}, options:{ plugins:{legend:{display:false}, tooltip}, scales:{
+  x:{ grid:{display:false}, ticks: tickStyle },
+  y:{ grid, ticks: tickStyle, beginAtZero:true, max:35 }
+}}});
 
-// ── Chart 8: Age & Gender ────────────────────────────────────────────────
-new Chart(document.getElementById('ageGender'), {
-  type: 'bar',
-  data: {
-    labels: ['18–24','25–34','35–44','45–54','55+'],
-    datasets: [
-      { label: 'Churn Rate %', data: [12.9,13.0,17.2,18.0,16.0], backgroundColor: 'rgba(167,139,250,.7)', borderRadius: 4 }
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false } },
-      y: { grid: gridOpts, beginAtZero: true, max: 25, ticks: { callback: v => v+'%' } }
-    }
-  }
-});
+// Payment failure vs churn
+new Chart(C('chPayFail'), { type:'bar', data:{
+  labels: payFailData.labels,
+  datasets:[{ label:'Churn Rate (%)', data: payFailData.rate,
+    backgroundColor: payFailData.rate.map(r => r >= 60 ? '#f87171' : r >= 30 ? '#fb923c' : '#34d399'),
+    borderRadius:6 }]
+}, options:{ plugins:{legend:{display:false}, tooltip}, scales:{
+  x:{ grid:{display:false}, ticks: tickStyle },
+  y:{ grid, ticks: tickStyle, beginAtZero:true, max:110 }
+}}});
 
-// ── Chart 9: Visit Frequency vs Churn ───────────────────────────────────
-new Chart(document.getElementById('visitChurn'), {
-  type: 'bar',
-  data: {
-    labels: ['0 visits','1–4 visits','5–8 visits','9–12 visits','13+ visits'],
-    datasets: [
-      { label: 'Churn Rate %', data: [100, 30.1, 29.2, 0, 0], backgroundColor: ['#f87171','#fb923c','#fbbf24','#34d399','#4f8ef7'], borderRadius: 6 }
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false } },
-      y: { grid: gridOpts, beginAtZero: true, max: 110, ticks: { callback: v => v+'%' } }
-    }
-  }
-});
+// Tenure churn line
+new Chart(C('chTenure'), { type:'line', data:{
+  labels: tenureData.labels,
+  datasets:[{ label:'Churn Rate (%)', data: tenureData.rate,
+    borderColor:'#fb923c', backgroundColor:'rgba(251,146,60,.12)',
+    fill:true, tension:.3, pointRadius:5, pointBackgroundColor:'#fb923c' }]
+}, options:{ plugins:{legend:{display:false}, tooltip}, scales:{
+  x:{ grid, ticks: tickStyle },
+  y:{ grid, ticks: tickStyle, beginAtZero:true, max:70 }
+}}});
 
-// ── Chart 10: Tenure vs Churn ────────────────────────────────────────────
-new Chart(document.getElementById('tenureChurn'), {
-  type: 'bar',
-  data: {
-    labels: ['0–3 mo','4–6 mo','7–12 mo','13–24 mo','24+ mo'],
-    datasets: [
-      { label: 'Churn Rate %', data: [28.4, 22.1, 18.6, 12.3, 6.7], backgroundColor: ['#f87171','#fb923c','#fbbf24','#4f8ef7','#34d399'], borderRadius: 6 }
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false } },
-      y: { grid: gridOpts, beginAtZero: true, ticks: { callback: v => v+'%' } }
-    }
-  }
-});
+// Visit frequency vs churn
+new Chart(C('chVisits'), { type:'bar', data:{
+  labels: visitData.labels,
+  datasets:[{ label:'Churn Rate (%)', data: visitData.rate,
+    backgroundColor: visitData.rate.map(r => r >= 60 ? '#f87171' : r >= 10 ? '#fb923c' : '#34d399'),
+    borderRadius:6 }]
+}, options:{ plugins:{legend:{display:false}, tooltip}, scales:{
+  x:{ grid:{display:false}, ticks: tickStyle },
+  y:{ grid, ticks: tickStyle, beginAtZero:true, max:110 }
+}}});
 
-// ── Chart 11: Satisfaction Distribution ─────────────────────────────────
-new Chart(document.getElementById('satDist'), {
-  type: 'bar',
-  data: {
-    labels: ['Score 1','Score 2','Score 3','Score 4','Score 5'],
-    datasets: [
-      { label: 'Active',  data: [52,180,468,895,942], backgroundColor: 'rgba(52,211,153,.7)', borderRadius: 4 },
-      { label: 'Churned', data: [28,76,198,112,49],   backgroundColor: 'rgba(248,113,113,.7)', borderRadius: 4 }
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { position: 'top' } },
-    scales: {
-      x: { grid: { display: false } },
-      y: { grid: gridOpts, beginAtZero: true }
-    }
-  }
-});
+// Visit distribution
+new Chart(C('chVisitDist'), { type:'bar', data:{
+  labels: visitData.labels,
+  datasets:[{ label:'Members', data: visitData.total,
+    backgroundColor:['#f87171','#fb923c','#4f8ef7','#34d399','#a78bfa'], borderRadius:6 }]
+}, options:{ plugins:{legend:{display:false}, tooltip}, scales:{
+  x:{ grid:{display:false}, ticks: tickStyle },
+  y:{ grid, ticks: tickStyle, beginAtZero:true }
+}}});
 
-// ── Chart 12: Payment Failures vs Churn ─────────────────────────────────
-new Chart(document.getElementById('paymentChurn'), {
-  type: 'bar',
-  data: {
-    labels: ['0 failures','1 failure','2 failures','3 failures','4+ failures'],
-    datasets: [
-      { label: 'Churn Rate %', data: [9.2, 18.4, 31.7, 47.3, 62.1], backgroundColor: ['#34d399','#fbbf24','#fb923c','#f87171','#dc2626'], borderRadius: 6 }
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false } },
-      y: { grid: gridOpts, beginAtZero: true, ticks: { callback: v => v+'%' } }
-    }
-  }
-});
+// Cohort retention
+new Chart(C('chCohort'), { type:'bar', data:{
+  labels: cohortData.labels,
+  datasets:[
+    { label:'Active', data: cohortData.total.map((t,i) => t - cohortData.churned[i]),
+      backgroundColor:'#34d399', borderRadius:4 },
+    { label:'Churned', data: cohortData.churned,
+      backgroundColor:'#f87171', borderRadius:4 }
+  ]
+}, options:{ plugins:{ legend, tooltip }, scales:{
+  x:{ stacked:true, grid:{display:false}, ticks: tickStyle },
+  y:{ stacked:true, grid, ticks: tickStyle }
+}}});
 
-// ── Watchlist table ──────────────────────────────────────────────────────
-const tbody = document.getElementById('watchlistBody');
-atRiskData.forEach((m, i) => {
-  const tierClass = m.tier === 'High' ? 'tier-high' : m.tier === 'Medium' ? 'tier-medium' : 'tier-low';
-  const satColor  = m.sat <= 2 ? '#f87171' : m.sat === 3 ? '#fbbf24' : '#34d399';
-  tbody.innerHTML += `
-    <tr>
-      <td style="color:var(--muted)">${i+1}</td>
-      <td><strong>${m.name}</strong></td>
-      <td>${m.plan}</td>
-      <td>${m.loc}</td>
-      <td>$${m.fee.toFixed(2)}</td>
-      <td>${m.visits}/mo</td>
-      <td style="color:${m.last>30?'#f87171':'inherit'}">${m.last} days ago</td>
-      <td style="color:${satColor}">${m.sat}/5 ★</td>
-      <td style="color:${m.pf>0?'#fb923c':'inherit'}">${m.pf}</td>
-      <td><strong style="color:var(--orange)">${m.score}</strong></td>
-      <td><span class="${tierClass}">${m.tier}</span></td>
-    </tr>`;
-});
+// Tenure distribution
+new Chart(C('chTenureDist'), { type:'doughnut', data:{
+  labels: tenureData.labels.map((l,i) => `${l} (${tenureData.total[i]})`),
+  datasets:[{ data: tenureData.total, backgroundColor:['#f87171','#fb923c','#4f8ef7','#34d399'],
+    borderWidth:2, borderColor:'#1a1d27' }]
+}, options:{ plugins:{ legend, tooltip }, cutout:'55%' }});
 
-// ── Chart 13: Revenue Lost ───────────────────────────────────────────────
-new Chart(document.getElementById('revenueChurn'), {
-  type: 'bar',
-  data: {
-    labels: revLost.map(m => m.label),
-    datasets: [{
-      label: 'MRR Lost ($)',
-      data: revLost.map(m => m.value),
-      backgroundColor: 'rgba(248,113,113,0.7)',
-      borderColor: '#f87171',
-      borderWidth: 1,
-      borderRadius: 4,
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false }, ticks: { maxTicksLimit: 12, maxRotation: 45 } },
-      y: { grid: gridOpts, beginAtZero: true, ticks: { callback: v => '$'+v } }
-    }
-  }
-});
+// Revenue by plan
+new Chart(C('chRevPlan'), { type:'bar', data:{
+  labels: revPlan.labels,
+  datasets:[{ label:'MRR ($)', data: revPlan.mrr,
+    backgroundColor:['#4f8ef7','#a78bfa','#fb923c','#34d399'], borderRadius:6 }]
+}, options:{ plugins:{legend:{display:false}, tooltip}, scales:{
+  x:{ grid:{display:false}, ticks: tickStyle },
+  y:{ grid, ticks: { ...tickStyle, callback: v => '$' + v.toLocaleString() }, beginAtZero:true }
+}}});
 
-// ── Chart 14: Revenue by Plan ────────────────────────────────────────────
-new Chart(document.getElementById('revPlan'), {
-  type: 'doughnut',
-  data: {
-    labels: ['Standard','Basic','Premium','Family'],
-    datasets: [{
-      data: [35298,18889,29638,32330],
-      backgroundColor: ['#4f8ef7','#34d399','#a78bfa','#fb923c'],
-      borderColor: '#1a1d27', borderWidth: 3,
-      hoverOffset: 8
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: true,
-    cutout: '60%',
-    plugins: {
-      legend: { position: 'right' },
-      tooltip: { callbacks: { label: ctx => ' $'+ctx.parsed.toLocaleString() } }
-    }
-  }
-});
+// Revenue pie
+new Chart(C('chRevPie'), { type:'doughnut', data:{
+  labels: revPlan.labels.map((l,i) => `${l} ($${revPlan.mrr[i].toLocaleString()})`),
+  datasets:[{ data: revPlan.mrr, backgroundColor:['#4f8ef7','#a78bfa','#fb923c','#34d399'],
+    borderWidth:2, borderColor:'#1a1d27' }]
+}, options:{ plugins:{ legend, tooltip }, cutout:'55%' }});
 
-// ── Chart 15: LTV vs Churn Rate ──────────────────────────────────────────
-new Chart(document.getElementById('ltvPlan'), {
-  type: 'bar',
-  data: {
-    labels: ['Family ($79.99)','Premium ($59.99)','Standard ($39.99)','Basic ($24.99)'],
-    datasets: [
-      { label: 'Avg LTV ($)', data: [2133,1578,1089,694], backgroundColor: ['#fb923c','#a78bfa','#4f8ef7','#34d399'], borderRadius: 6, yAxisID: 'y' },
-      { label: 'Churn Rate %', data: [13.9,15.7,16.5,14.9], type: 'line', borderColor: '#f87171', backgroundColor: 'transparent', borderWidth: 2.5, yAxisID: 'y1', pointRadius: 5, pointBackgroundColor: '#f87171', tension: 0.3 }
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: 'top' } },
-    scales: {
-      x: { grid: { display: false } },
-      y:  { grid: gridOpts, beginAtZero: true, position: 'left',  ticks: { callback: v => '$'+v } },
-      y1: { grid: { display: false }, beginAtZero: true, position: 'right', max: 25, ticks: { callback: v => v+'%' } }
-    }
-  }
+// Revenue lost by reason
+new Chart(C('chRevLost'), { type:'bar', data:{
+  labels: reasons.labels,
+  datasets:[{ label:'Annual Revenue Lost ($)',
+    data: reasons.data.map(n => Math.round(n * 38 * 12)),
+    backgroundColor: reasons.data.map((_,i) => COLORS[i % COLORS.length]), borderRadius:6 }]
+}, options:{ plugins:{legend:{display:false}, tooltip:{
+  ...tooltip,
+  callbacks:{ label: c => '  $' + c.raw.toLocaleString() + '/yr' }
+}}, scales:{
+  x:{ grid:{display:false}, ticks: tickStyle },
+  y:{ grid, ticks:{ ...tickStyle, callback: v => '$' + (v/1000).toFixed(0) + 'K' }, beginAtZero:true }
+}}});
+
+// ── Populate At-Risk Table ────────────────────────────────
+const tbody = document.getElementById('riskBody');
+atRisk.forEach((m, i) => {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="color:var(--muted)">${i+1}</td>
+    <td style="font-weight:600">${m.name}</td>
+    <td>${m.plan}</td>
+    <td>${m.loc}</td>
+    <td style="color:${m.visits<=2?'var(--red)':'var(--text)'}">${m.visits}</td>
+    <td style="color:${m.last>30?'var(--red)':m.last>14?'var(--orange)':'var(--text)'}">${m.last} days</td>
+    <td style="color:${m.sat<=2?'var(--red)':m.sat==3?'var(--orange)':'var(--green)'}">${m.sat}/5</td>
+    <td style="color:${m.pf>=2?'var(--red)':m.pf==1?'var(--orange)':'var(--text)'}">${m.pf}</td>
+    <td style="font-weight:700;color:${m.score>=6?'var(--red)':m.score>=3?'var(--yellow)':'var(--green)'}">${m.score}</td>
+    <td><span class="tier-${m.tier.toLowerCase()}">${m.tier}</span></td>
+  `;
+  tbody.appendChild(tr);
 });
 </script>
 </body>
