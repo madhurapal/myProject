@@ -1,0 +1,386 @@
+// =============================================================================
+// NovaStar Financial Group — P&L Variance Analysis
+// DAX Measures — Power BI Desktop
+// All measures go in a dedicated "Key Measures" table (blank table in model)
+// =============================================================================
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 1: BASE ACTUAL MEASURES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Total Actual Amount (signed: Revenue positive, Costs negative)
+Total Actual =
+    SUMX(
+        fact_Actual,
+        fact_Actual[amount]
+    )
+
+// Revenue Actual (only Revenue category accounts)
+Revenue Actual =
+    CALCULATE(
+        [Total Actual],
+        dim_Account[category] = "Revenue"
+    )
+
+// Provision for Credit Losses (negative — loss reserve)
+Provision Actual =
+    CALCULATE(
+        [Total Actual],
+        dim_Account[category] = "Provision"
+    )
+
+// Net Revenue (Revenue minus Provision)
+Net Revenue =
+    [Revenue Actual] + [Provision Actual]
+
+// Operating Expenses (negative)
+OpEx Actual =
+    CALCULATE(
+        [Total Actual],
+        dim_Account[category] = "OpEx"
+    )
+
+// EBITDA = Net Revenue + OpEx (both already signed)
+EBITDA =
+    [Net Revenue] + [OpEx Actual]
+
+// Depreciation & Amortisation (negative)
+DA Actual =
+    CALCULATE(
+        [Total Actual],
+        dim_Account[category] = "D&A"
+    )
+
+// Pre-Tax Income
+Pre-Tax Income =
+    [EBITDA] + [DA Actual]
+
+// Tax (negative)
+Tax Actual =
+    CALCULATE(
+        [Total Actual],
+        dim_Account[category] = "Tax"
+    )
+
+// Net Income
+Net Income =
+    [Pre-Tax Income] + [Tax Actual]
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 2: BUDGET MEASURES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Total Budget Amount
+Total Budget =
+    SUMX(
+        fact_Budget,
+        fact_Budget[budget_amount]
+    )
+
+// Revenue Budget
+Revenue Budget =
+    CALCULATE(
+        [Total Budget],
+        dim_Account[category] = "Revenue"
+    )
+
+// OpEx Budget
+OpEx Budget =
+    CALCULATE(
+        [Total Budget],
+        dim_Account[category] = "OpEx"
+    )
+
+// EBITDA Budget
+EBITDA Budget =
+    CALCULATE(
+        [Total Budget],
+        dim_Account[category] IN {"Revenue", "Provision", "OpEx"}
+    )
+
+// Net Income Budget
+Net Income Budget =
+    [Total Budget]
+    -- (All categories summed = Net Income when all categories included)
+    -- Alternatively:
+    // CALCULATE([Total Budget], dim_Account[category] IN {"Revenue","Provision","OpEx","D&A","Tax"})
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 3: VARIANCE MEASURES (Actual vs Budget)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Revenue Variance ($ millions)
+Revenue Variance $ =
+    DIVIDE([Revenue Actual] - [Revenue Budget], 1, 0)
+
+// Revenue Variance %
+Revenue Variance % =
+    DIVIDE(
+        [Revenue Actual] - [Revenue Budget],
+        ABS([Revenue Budget]),
+        0
+    )
+
+// OpEx Variance $ (positive = over budget / unfavorable for expenses)
+OpEx Variance $ =
+    [OpEx Actual] - [OpEx Budget]
+
+// OpEx Variance % (positive = spending MORE than budget)
+OpEx Variance % =
+    DIVIDE(
+        ABS([OpEx Actual]) - ABS([OpEx Budget]),
+        ABS([OpEx Budget]),
+        0
+    )
+
+// EBITDA Variance $
+EBITDA Variance $ =
+    [EBITDA] - [EBITDA Budget]
+
+// EBITDA Variance %
+EBITDA Variance % =
+    DIVIDE(
+        [EBITDA] - [EBITDA Budget],
+        ABS([EBITDA Budget]),
+        0
+    )
+
+// Net Income Variance $
+Net Income Variance $ =
+    [Net Income] - [Net Income Budget]
+
+// Net Income Variance %
+Net Income Variance % =
+    DIVIDE(
+        [Net Income] - [Net Income Budget],
+        ABS([Net Income Budget]),
+        0
+    )
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 4: TIME-INTELLIGENCE MEASURES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Year-to-Date Revenue
+Revenue YTD =
+    CALCULATE(
+        [Revenue Actual],
+        DATESYTD(dim_Date[Date])
+    )
+
+// Prior Year Revenue (same period)
+Revenue PY =
+    CALCULATE(
+        [Revenue Actual],
+        SAMEPERIODLASTYEAR(dim_Date[Date])
+    )
+
+// Revenue Year-over-Year Growth $
+Revenue YoY $ =
+    [Revenue Actual] - [Revenue PY]
+
+// Revenue Year-over-Year Growth %
+Revenue YoY % =
+    DIVIDE(
+        [Revenue Actual] - [Revenue PY],
+        ABS([Revenue PY]),
+        0
+    )
+
+// Prior Year Net Income
+Net Income PY =
+    CALCULATE(
+        [Net Income],
+        SAMEPERIODLASTYEAR(dim_Date[Date])
+    )
+
+// Net Income YoY %
+Net Income YoY % =
+    DIVIDE(
+        [Net Income] - [Net Income PY],
+        ABS([Net Income PY]),
+        0
+    )
+
+// Prior Month Revenue
+Revenue PM =
+    CALCULATE(
+        [Revenue Actual],
+        PREVIOUSMONTH(dim_Date[Date])
+    )
+
+// Month-over-Month Revenue Growth %
+Revenue MoM % =
+    DIVIDE(
+        [Revenue Actual] - [Revenue PM],
+        ABS([Revenue PM]),
+        0
+    )
+
+// Rolling 3-Month Average Revenue
+Revenue 3M Rolling Avg =
+    AVERAGEX(
+        DATESINPERIOD(
+            dim_Date[Date],
+            LASTDATE(dim_Date[Date]),
+            -3,
+            MONTH
+        ),
+        [Revenue Actual]
+    )
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 5: FINANCIAL RATIO MEASURES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Cost-to-Income Ratio (lower = more efficient)
+Cost to Income Ratio =
+    DIVIDE(
+        ABS([OpEx Actual]),
+        [Revenue Actual],
+        0
+    )
+
+// EBITDA Margin %
+EBITDA Margin % =
+    DIVIDE(
+        [EBITDA],
+        [Revenue Actual],
+        0
+    )
+
+// Net Income Margin %
+Net Income Margin % =
+    DIVIDE(
+        [Net Income],
+        [Revenue Actual],
+        0
+    )
+
+// Net Interest Income (subcategory drill-down)
+Net Interest Income =
+    CALCULATE(
+        [Revenue Actual],
+        dim_Account[subcategory] = "Net Interest"
+    )
+
+// Fee Income
+Fee Income =
+    CALCULATE(
+        [Revenue Actual],
+        dim_Account[subcategory] = "Fee & Commission"
+    )
+
+// Trading Revenue
+Trading Revenue =
+    CALCULATE(
+        [Revenue Actual],
+        dim_Account[subcategory] = "Trading"
+    )
+
+// Personnel Cost (largest OpEx line)
+Personnel Cost =
+    CALCULATE(
+        [OpEx Actual],
+        dim_Account[subcategory] = "Personnel"
+    )
+
+// Technology Cost
+Technology Cost =
+    CALCULATE(
+        [OpEx Actual],
+        dim_Account[subcategory] = "Technology"
+    )
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 6: REGIONAL MEASURES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Revenue for selected region (used in region-level cards)
+Region Revenue =
+    CALCULATE(
+        [Revenue Actual],
+        ALLEXCEPT(dim_Branch, dim_Branch[region])
+    )
+
+// Branch count in context
+Branch Count =
+    DISTINCTCOUNT(fact_Actual[branch_id])
+
+// Revenue per Branch
+Revenue Per Branch =
+    DIVIDE(
+        [Revenue Actual],
+        [Branch Count],
+        0
+    )
+
+// Net Income per Branch
+Net Income Per Branch =
+    DIVIDE(
+        [Net Income],
+        [Branch Count],
+        0
+    )
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 7: DYNAMIC TITLE / LABEL MEASURES (for report visuals)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Selected Year label (for titles)
+Selected Year Label =
+    IF(
+        HASONEVALUE(dim_Date[Year]),
+        "FY" & FORMAT(SELECTEDVALUE(dim_Date[Year]), "0"),
+        "All Years"
+    )
+
+// Variance status label (Favorable / Unfavorable / On Target)
+Revenue Variance Status =
+    VAR _var = [Revenue Variance %]
+    RETURN
+        SWITCH(
+            TRUE(),
+            _var >  0.02, "▲ Favorable",
+            _var < -0.02, "▼ Unfavorable",
+            "● On Target"
+        )
+
+// OpEx status label (for expenses, over-budget = unfavorable)
+OpEx Status =
+    VAR _var = [OpEx Variance %]
+    RETURN
+        SWITCH(
+            TRUE(),
+            _var >  0.02, "▼ Over Budget",
+            _var < -0.02, "▲ Under Budget",
+            "● On Target"
+        )
+
+// KPI color measure (1=green, 0=amber, -1=red) — use in conditional formatting
+Revenue KPI Color =
+    VAR _var = [Revenue Variance %]
+    RETURN
+        IF(_var > 0.02, 1, IF(_var < -0.02, -1, 0))
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 8: FORMAT STRINGS (apply as measure format in Power BI)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// For dollar millions:     "$#,##0.0M"  (set in Measure Tools → Format)
+// For percentage:          "#,##0.0%"
+// For variance $:          "+$#,##0.0M;-$#,##0.0M;$0.0M"
+// For variance %:          "+0.0%;-0.0%;0.0%"
+//
+// Apply conditional formatting in visuals:
+//   Revenue Variance % → Background color by field: Revenue KPI Color
+//   (Map: 1=green #00C49A, 0=amber #FFC107, -1=red #FF4D4D)
+

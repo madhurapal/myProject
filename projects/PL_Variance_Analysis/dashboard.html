@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NovaStar Financial Group — P&L Variance Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+    --border: #30363d; --text: #e6edf3; --muted: #8b949e;
+    --blue: #58a6ff; --green: #3fb950; --red: #f85149;
+    --amber: #d29922; --purple: #bc8cff; --teal: #39d353;
+    --accent: #1f6feb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; }
+
+  /* NAV */
+  .nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; gap: 0; position: sticky; top: 0; z-index: 100; }
+  .nav-brand { color: var(--text); font-weight: 700; font-size: 15px; padding: 14px 20px 14px 0; border-right: 1px solid var(--border); margin-right: 8px; white-space: nowrap; }
+  .nav-brand span { color: var(--blue); }
+  .nav-tab { padding: 14px 16px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: 13px; transition: color .15s; white-space: nowrap; }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .nav-meta { margin-left: auto; color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+  /* PAGES */
+  .page { display: none; padding: 24px; max-width: 1400px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* GRID */
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .grid-1 { margin-bottom: 24px; }
+  @media (max-width: 900px) { .grid-4 { grid-template-columns: 1fr 1fr; } .grid-2,.grid-3 { grid-template-columns: 1fr; } }
+
+  /* CARD */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 8px; }
+  .card-value { font-size: 28px; font-weight: 700; line-height: 1.1; }
+  .card-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .card-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-top: 6px; }
+  .badge-green { background: rgba(63,185,80,.15); color: var(--green); }
+  .badge-red   { background: rgba(248,81,73,.15);  color: var(--red); }
+  .badge-amber { background: rgba(210,153,34,.15); color: var(--amber); }
+
+  /* SECTION HEADER */
+  .section-header { margin-bottom: 16px; }
+  .section-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .section-sub { font-size: 12px; color: var(--muted); }
+
+  /* CHART CONTAINER */
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { max-height: 300px; }
+  .chart-wrap.tall canvas { max-height: 380px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: var(--bg3); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .neutral { color: var(--muted); }
+
+  /* WATERFALL BARS */
+  .wf-bar { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .wf-label { width: 130px; font-size: 12px; color: var(--muted); text-align: right; flex-shrink: 0; }
+  .wf-track { flex: 1; height: 22px; background: var(--bg3); border-radius: 3px; overflow: hidden; position: relative; }
+  .wf-fill { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 6px; font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; transition: width .5s ease; }
+  .wf-val { margin-left: 8px; font-size: 12px; width: 70px; flex-shrink: 0; }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* PAGE TITLE */
+  .page-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .page-desc  { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+  /* BULLET */
+  .insight-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .insight-list li { padding-left: 18px; position: relative; font-size: 13px; line-height: 1.5; color: var(--muted); }
+  .insight-list li::before { content: "→"; position: absolute; left: 0; color: var(--blue); }
+  .insight-list strong { color: var(--text); }
+
+  /* REGION PILL */
+  .region-pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .r-NE { background: rgba(88,166,255,.15); color: var(--blue); }
+  .r-SE { background: rgba(63,185,80,.15);  color: var(--green); }
+  .r-MW { background: rgba(188,140,255,.15);color: var(--purple); }
+  .r-SW { background: rgba(210,153,34,.15); color: var(--amber); }
+  .r-WE { background: rgba(57,211,83,.15);  color: var(--teal); }
+
+  /* FOOTER */
+  .footer { text-align: center; color: var(--muted); font-size: 11px; padding: 32px 24px 16px; border-top: 1px solid var(--border); margin-top: 32px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand">NovaStar <span>Financial</span></div>
+  <div class="nav-tab active" onclick="showPage('exec',this)">Executive P&amp;L</div>
+  <div class="nav-tab" onclick="showPage('variance',this)">Variance Analysis</div>
+  <div class="nav-tab" onclick="showPage('regional',this)">Regional Performance</div>
+  <div class="nav-tab" onclick="showPage('trend',this)">Monthly Trends</div>
+  <div class="nav-tab" onclick="showPage('cost',this)">Cost Analysis</div>
+  <div class="nav-meta">FY 2022–2024 &nbsp;|&nbsp; 2.6M+ Rows &nbsp;|&nbsp; 60 Branches</div>
+</nav>
+
+<!-- ── PAGE 1: EXECUTIVE P&L ─────────────────────────────────────── -->
+<div id="exec" class="page active">
+  <div class="page-title">Executive P&amp;L Summary</div>
+  <div class="page-desc">Full-year income statement | NovaStar Financial Group | FY 2022–2024</div>
+
+  <!-- KPI CARDS -->
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-title">2024 Revenue</div>
+      <div class="card-value" style="color:var(--blue)">$444.2M</div>
+      <div class="card-sub">Budget: $360.3M</div>
+      <span class="card-badge badge-green">▲ +23.3% vs Budget</span>
+    </div>
+    <div class="card">
+      <div class="card-title">2024 EBITDA</div>
+      <div class="card-value" style="color:var(--green)">$237.1M</div>
+      <div class="card-sub">Budget: $169.0M</div>
+      <span class="card-badge badge-green">▲ +40.2% vs Budget</span>
+    </div>
+    <div class="card">
+      <div class="card-title">2024 Net Income</div>
+      <div class="card-value" style="color:var(--teal)">$207.7M</div>
+      <div class="card-sub">Budget: $143.3M</div>
+      <span class="card-badge badge-green">▲ +45.0% vs Budget</span>
+    </div>
+    <div class="card">
+      <div class="card-title">Cost-to-Income Ratio</div>
+      <div class="card-value" style="color:var(--amber)">41.7%</div>
+      <div class="card-sub">Personnel: 18.8% of Revenue</div>
+      <span class="card-badge badge-green">▼ Improving YoY</span>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Annual Revenue, EBITDA &amp; Net Income ($ Millions)</div>
+      <div class="chart-wrap"><canvas id="execBarChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">P&amp;L Waterfall — 2024 Actual ($ Millions)</div>
+      <div id="waterfall" style="padding-top:8px;"></div>
+    </div>
+  </div>
+
+  <!-- YoY TABLE -->
+  <div class="card grid-1">
+    <div class="card-title" style="margin-bottom:14px;">Three-Year Income Statement Summary</div>
+    <table>
+      <thead>
+        <tr>
+          <th>P&amp;L Line</th>
+          <th class="num">FY 2022</th>
+          <th class="num">FY 2023</th>
+          <th class="num">FY 2024</th>
+          <th class="num">2024 Budget</th>
+          <th class="num">Var vs Budget</th>
+          <th class="num">YoY Growth</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Revenue</strong></td><td class="num">$361.1M</td><td class="num">$393.7M</td><td class="num">$444.2M</td><td class="num">$360.3M</td><td class="num pos">+$83.9M</td><td class="num pos">+12.8%</td></tr>
+        <tr><td style="color:var(--muted)">Provision</td><td class="num neg">($18.7M)</td><td class="num neg">($21.1M)</td><td class="num neg">($22.0M)</td><td class="num neg">($19.9M)</td><td class="num neg">−$2.1M</td><td class="num neg">+4.2%</td></tr>
+        <tr><td><strong>Net Revenue</strong></td><td class="num">$342.3M</td><td class="num">$372.6M</td><td class="num">$422.2M</td><td class="num">$340.4M</td><td class="num pos">+$81.8M</td><td class="num pos">+13.3%</td></tr>
+        <tr><td style="color:var(--muted)">Operating Expenses</td><td class="num neg">($162.6M)</td><td class="num neg">($171.5M)</td><td class="num neg">($185.1M)</td><td class="num neg">($171.4M)</td><td class="num neg">−$13.8M</td><td class="num neg">+7.9%</td></tr>
+        <tr style="background:rgba(63,185,80,.06)"><td><strong>EBITDA</strong></td><td class="num">$179.8M</td><td class="num">$201.1M</td><td class="num">$237.1M</td><td class="num">$169.0M</td><td class="num pos">+$68.0M</td><td class="num pos">+17.9%</td></tr>
+        <tr><td style="color:var(--muted)">D&amp;A</td><td class="num neg">($9.6M)</td><td class="num neg">($10.4M)</td><td class="num neg">($11.1M)</td><td class="num neg">($9.8M)</td><td class="num neg">−$1.4M</td><td class="num neg">+7.3%</td></tr>
+        <tr><td style="color:var(--muted)">Tax</td><td class="num neg">($16.3M)</td><td class="num neg">($17.2M)</td><td class="num neg">($18.2M)</td><td class="num neg">($16.0M)</td><td class="num neg">−$2.2M</td><td class="num neg">+5.4%</td></tr>
+        <tr style="background:rgba(57,211,83,.08)"><td><strong>Net Income</strong></td><td class="num">$153.9M</td><td class="num">$173.5M</td><td class="num">$207.7M</td><td class="num">$143.3M</td><td class="num pos">+$64.5M</td><td class="num pos">+19.7%</td></tr>
+        <tr><td style="color:var(--muted)">EBITDA Margin</td><td class="num">49.8%</td><td class="num">51.1%</td><td class="num">53.4%</td><td class="num">46.9%</td><td class="num pos">+6.5pp</td><td class="num pos">+2.3pp</td></tr>
+        <tr><td style="color:var(--muted)">Net Income Margin</td><td class="num">42.6%</td><td class="num">44.1%</td><td class="num">46.8%</td><td class="num">39.8%</td><td class="num pos">+7.0pp</td><td class="num pos">+2.7pp</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── PAGE 2: VARIANCE ANALYSIS ─────────────────────────────────── -->
+<div id="variance" class="page">
+  <div class="page-title">Variance Analysis — FY 2024</div>
+  <div class="page-desc">Actual vs Budget by P&amp;L category | Identifying key drivers of outperformance</div>
+
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-title">Revenue Variance</div>
+      <div class="card-value pos">+$83.9M</div>
+      <div class="card-sub">+23.3% above budget</div>
+      <span class="card-badge badge-green">▲ Favorable</span>
+    </div>
+    <div class="card">
+      <div class="card-title">OpEx Variance</div>
+      <div class="card-value neg">−$13.8M</div>
+      <div class="card-sub">+8.0% over budget</div>
+      <span class="card-badge badge-red">▼ Unfavorable</span>
+    </div>
+    <div class="card">
+      <div class="card-title">EBITDA Variance</div>
+      <div class="card-value pos">+$68.0M</div>
+      <div class="card-sub">+40.2% above budget</div>
+      <span class="card-badge badge-green">▲ Favorable</span>
+    </div>
+    <div class="card">
+      <div class="card-title">Net Income Variance</div>
+      <div class="card-value pos">+$64.5M</div>
+      <div class="card-sub">+45.0% above budget</div>
+      <span class="card-badge badge-green">▲ Favorable</span>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Actual vs Budget by P&amp;L Category ($ Millions)</div>
+      <div class="chart-wrap tall"><canvas id="varBar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Variance % by Category</div>
+      <div class="chart-wrap tall"><canvas id="varPct"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card grid-1">
+    <div class="card-title" style="margin-bottom:14px;">Detailed Variance Table — FY 2024</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th class="num">Actual</th>
+          <th class="num">Budget</th>
+          <th class="num">Variance $</th>
+          <th class="num">Variance %</th>
+          <th>Status</th>
+          <th>Key Driver</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Revenue</strong></td><td class="num">$444.2M</td><td class="num">$360.3M</td><td class="num pos">+$83.9M</td><td class="num pos">+23.3%</td><td><span class="card-badge badge-green">▲ Favorable</span></td><td>Net Interest Income &amp; Fee growth</td></tr>
+        <tr><td>Provision</td><td class="num neg">($22.0M)</td><td class="num neg">($19.9M)</td><td class="num neg">−$2.1M</td><td class="num neg">−10.4%</td><td><span class="card-badge badge-red">▼ Unfavorable</span></td><td>Higher credit loss reserves</td></tr>
+        <tr><td><strong>Net Revenue</strong></td><td class="num">$422.2M</td><td class="num">$340.4M</td><td class="num pos">+$81.8M</td><td class="num pos">+24.0%</td><td><span class="card-badge badge-green">▲ Favorable</span></td><td>Revenue outperformance</td></tr>
+        <tr><td>OpEx</td><td class="num neg">($185.1M)</td><td class="num neg">($171.4M)</td><td class="num neg">−$13.8M</td><td class="num neg">−8.0%</td><td><span class="card-badge badge-red">▼ Unfavorable</span></td><td>Personnel &amp; Technology overspend</td></tr>
+        <tr style="background:rgba(63,185,80,.06)"><td><strong>EBITDA</strong></td><td class="num">$237.1M</td><td class="num">$169.0M</td><td class="num pos">+$68.0M</td><td class="num pos">+40.2%</td><td><span class="card-badge badge-green">▲ Favorable</span></td><td>Revenue beat offsets cost overrun</td></tr>
+        <tr><td>D&amp;A</td><td class="num neg">($11.1M)</td><td class="num neg">($9.8M)</td><td class="num neg">−$1.4M</td><td class="num neg">−14.0%</td><td><span class="card-badge badge-red">▼ Unfavorable</span></td><td>Technology asset depreciation</td></tr>
+        <tr><td>Tax</td><td class="num neg">($18.2M)</td><td class="num neg">($16.0M)</td><td class="num neg">−$2.2M</td><td class="num neg">−13.6%</td><td><span class="card-badge badge-red">▼ Unfavorable</span></td><td>Higher taxable income</td></tr>
+        <tr style="background:rgba(57,211,83,.08)"><td><strong>Net Income</strong></td><td class="num">$207.7M</td><td class="num">$143.3M</td><td class="num pos">+$64.5M</td><td class="num pos">+45.0%</td><td><span class="card-badge badge-green">▲ Favorable</span></td><td>Strong top-line growth</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card grid-1">
+    <div class="card-title" style="margin-bottom:12px;">Key Insights</div>
+    <ul class="insight-list">
+      <li><strong>Revenue exceeded budget by $83.9M (+23.3%)</strong> — primarily driven by Net Interest Income outperformance as interest rate environment favoured NovaStar's asset mix.</li>
+      <li><strong>OpEx ran $13.8M over budget (+8.0%)</strong> — Personnel costs were the largest driver due to mid-year headcount expansion and retention bonuses. Technology investments also exceeded plan.</li>
+      <li><strong>EBITDA Margin of 53.4%</strong> — 6.5 percentage points above the 46.9% budget target, demonstrating strong operating leverage.</li>
+      <li><strong>Net Income of $207.7M</strong> — a record for NovaStar, representing 19.7% YoY growth and 45.0% above the budget plan.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ── PAGE 3: REGIONAL PERFORMANCE ──────────────────────────────── -->
+<div id="regional" class="page">
+  <div class="page-title">Regional Performance — FY 2024</div>
+  <div class="page-desc">Revenue, EBITDA and Net Income across 5 regions | 60 branches (12 per region)</div>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">Top Region — Revenue</div>
+      <div class="card-value" style="color:var(--teal)">$92.6M</div>
+      <div class="card-sub">West Region | 12 Branches</div>
+      <span class="card-badge badge-green">▲ Highest Revenue</span>
+    </div>
+    <div class="card">
+      <div class="card-title">Revenue Range (Min→Max)</div>
+      <div class="card-value" style="color:var(--blue)">$85M→$93M</div>
+      <div class="card-sub">NE $84.7M to West $92.6M</div>
+      <span class="card-badge badge-amber">~$7.9M spread</span>
+    </div>
+    <div class="card">
+      <div class="card-title">Avg Net Income / Branch</div>
+      <div class="card-value" style="color:var(--green)">$3.46M</div>
+      <div class="card-sub">$207.7M ÷ 60 branches</div>
+      <span class="card-badge badge-green">▲ +19.7% YoY</span>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Revenue by Region ($ Millions)</div>
+      <div class="chart-wrap tall"><canvas id="regBar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Net Income by Region ($ Millions)</div>
+      <div class="chart-wrap tall"><canvas id="regNI"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card grid-1">
+    <div class="card-title" style="margin-bottom:14px;">Regional P&amp;L Detail — FY 2024</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Region</th>
+          <th class="num">Revenue</th>
+          <th class="num">Provision</th>
+          <th class="num">Net Revenue</th>
+          <th class="num">OpEx</th>
+          <th class="num">EBITDA</th>
+          <th class="num">Net Income</th>
+          <th class="num">EBITDA Margin</th>
+          <th class="num">Cost-to-Income</th>
+        </tr>
+      </thead>
+      <tbody id="regTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── PAGE 4: MONTHLY TRENDS ─────────────────────────────────────── -->
+<div id="trend" class="page">
+  <div class="page-title">Monthly Trends — FY 2022–2024</div>
+  <div class="page-desc">36-month revenue, EBITDA and Net Income trajectory | Actual vs Budget overlay</div>
+
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-title">Best Month — Revenue</div>
+      <div class="card-value pos">$38.3M</div>
+      <div class="card-sub">December 2024</div>
+      <span class="card-badge badge-green">Peak Month</span>
+    </div>
+    <div class="card">
+      <div class="card-title">Lowest Month — Revenue</div>
+      <div class="card-value" style="color:var(--muted)">$28.2M</div>
+      <div class="card-sub">February 2022</div>
+      <span class="card-badge badge-amber">Seasonality Low</span>
+    </div>
+    <div class="card">
+      <div class="card-title">2024 Monthly Avg Revenue</div>
+      <div class="card-value" style="color:var(--blue)">$37.0M</div>
+      <div class="card-sub">vs $30.0M budget avg</div>
+      <span class="card-badge badge-green">▲ +$7.0M / month</span>
+    </div>
+    <div class="card">
+      <div class="card-title">Revenue Growth (3-yr)</div>
+      <div class="card-value pos">+23.0%</div>
+      <div class="card-sub">Jan 2022 → Dec 2024</div>
+      <span class="card-badge badge-green">▲ CAGR ~10.9%</span>
+    </div>
+  </div>
+
+  <div class="card grid-1">
+    <div class="card-title">Monthly Revenue — Actual vs Budget ($ Millions) | Jan 2022 – Dec 2024</div>
+    <div class="chart-wrap tall" style="margin-top:12px;"><canvas id="trendLine"></canvas></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Monthly EBITDA — 36-Month Trend ($ Millions)</div>
+      <div class="chart-wrap"><canvas id="ebitdaTrend"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Monthly Net Income — 36-Month Trend ($ Millions)</div>
+      <div class="chart-wrap"><canvas id="niTrend"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PAGE 5: COST ANALYSIS ──────────────────────────────────────── -->
+<div id="cost" class="page">
+  <div class="page-title">Cost Analysis — FY 2024</div>
+  <div class="page-desc">Operating expense breakdown by subcategory | $185.1M total OpEx | 60 branches</div>
+
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-title">Total OpEx</div>
+      <div class="card-value neg">$185.1M</div>
+      <div class="card-sub">vs $171.4M budget</div>
+      <span class="card-badge badge-red">▼ $13.8M over budget</span>
+    </div>
+    <div class="card">
+      <div class="card-title">Personnel Cost</div>
+      <div class="card-value" style="color:var(--amber)">$83.3M</div>
+      <div class="card-sub">45.0% of total OpEx</div>
+      <span class="card-badge badge-amber">Largest cost line</span>
+    </div>
+    <div class="card">
+      <div class="card-title">Technology Cost</div>
+      <div class="card-value" style="color:var(--purple)">$21.7M</div>
+      <div class="card-sub">11.7% of total OpEx</div>
+      <span class="card-badge badge-amber">Digital investment</span>
+    </div>
+    <div class="card">
+      <div class="card-title">OpEx per Branch</div>
+      <div class="card-value" style="color:var(--blue)">$3.09M</div>
+      <div class="card-sub">$185.1M ÷ 60 branches</div>
+      <span class="card-badge badge-green">vs $2.86M budget</span>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">OpEx Composition — FY 2024 ($ Millions)</div>
+      <div class="chart-wrap" style="max-width:380px;margin:0 auto;"><canvas id="opexDonut"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">OpEx by Subcategory vs Budget — FY 2024 ($ Millions)</div>
+      <div class="chart-wrap tall"><canvas id="opexVarBar"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card grid-1">
+    <div class="card-title" style="margin-bottom:14px;">OpEx Subcategory Breakdown — FY 2024</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Subcategory</th>
+          <th class="num">Actual ($M)</th>
+          <th class="num">% of OpEx</th>
+          <th class="num">YoY Change</th>
+          <th>Commentary</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Personnel</strong></td><td class="num neg">$83.3M</td><td class="num">45.0%</td><td class="num neg">+8.4%</td><td>Headcount expansion, retention bonuses</td></tr>
+        <tr><td>Operations</td><td class="num neg">$29.4M</td><td class="num">15.9%</td><td class="num neg">+6.1%</td><td>Branch operating costs, vendor contracts</td></tr>
+        <tr><td>Technology</td><td class="num neg">$21.7M</td><td class="num">11.7%</td><td class="num neg">+14.2%</td><td>Core banking upgrade, cloud migration</td></tr>
+        <tr><td>Premises</td><td class="num neg">$14.4M</td><td class="num">7.8%</td><td class="num neg">+4.8%</td><td>Lease renewals at higher rates</td></tr>
+        <tr><td>Marketing</td><td class="num neg">$14.2M</td><td class="num">7.7%</td><td class="num neg">+9.3%</td><td>Brand refresh, digital acquisition</td></tr>
+        <tr><td>Professional Svcs</td><td class="num neg">$11.2M</td><td class="num">6.0%</td><td class="num neg">+7.5%</td><td>Consulting, legal, audit fees</td></tr>
+        <tr><td>Admin</td><td class="num neg">$11.0M</td><td class="num">5.9%</td><td class="num neg">+5.8%</td><td>Back-office, HR, support functions</td></tr>
+        <tr style="background:var(--bg3)"><td><strong>Total OpEx</strong></td><td class="num neg"><strong>$185.1M</strong></td><td class="num"><strong>100%</strong></td><td class="num neg"><strong>+7.9%</strong></td><td>YoY growth driven by Personnel &amp; Tech</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">NovaStar Financial Group &nbsp;|&nbsp; P&L Variance Analysis &nbsp;|&nbsp; FY 2022–2024 &nbsp;|&nbsp; Madhura Pal — Analytics Portfolio</div>
+
+<script>
+// ── DATA ────────────────────────────────────────────────────────────────────
+const MONTHLY = [{"p":"2022-01","yr":2022,"a_Revenue":30395285,"b_Revenue":26136660,"a_Provision":-1706946,"b_Provision":-1466520,"a_OpEx":-15140767,"b_OpEx":-13019820,"a_D&A":-798313,"b_D&A":-686400,"a_Tax":-1350527,"b_Tax":-1161600},{"p":"2022-02","yr":2022,"a_Revenue":28183994,"b_Revenue":24246072,"a_Provision":-1582264,"b_Provision":-1359619,"a_OpEx":-14029671,"b_OpEx":-12071928,"a_D&A":-739765,"b_D&A":-636336,"a_Tax":-1251498,"b_Tax":-1076022},{"p":"2022-03","yr":2022,"a_Revenue":30427866,"b_Revenue":26188000,"a_Provision":-1708770,"b_Provision":-1468528,"a_OpEx":-15157714,"b_OpEx":-13034736,"a_D&A":-799206,"b_D&A":-686986,"a_Tax":-1351944,"b_Tax":-1163160},{"p":"2022-04","yr":2022,"a_Revenue":29530791,"b_Revenue":25415880,"a_Provision":-1657952,"b_Provision":-1424889,"a_OpEx":-14710854,"b_OpEx":-12651288,"a_D&A":-775350,"b_D&A":-666972,"a_Tax":-1312256,"b_Tax":-1130040},{"p":"2022-05","yr":2022,"a_Revenue":30218025,"b_Revenue":26003940,"a_Provision":-1696829,"b_Provision":-1458221,"a_OpEx":-15048649,"b_OpEx":-12952128,"a_D&A":-792786,"b_D&A":-682608,"a_Tax":-1342671,"b_Tax":-1156680},{"p":"2022-06","yr":2022,"a_Revenue":30093556,"b_Revenue":25897020,"a_Provision":-1689643,"b_Provision":-1452235,"a_OpEx":-14986736,"b_OpEx":-12899088,"a_D&A":-789522,"b_D&A":-679872,"a_Tax":-1337099,"b_Tax":-1152360},{"p":"2022-07","yr":2022,"a_Revenue":30498210,"b_Revenue":26245800,"a_Provision":-1712374,"b_Provision":-1471764,"a_OpEx":-15188444,"b_OpEx":-13060512,"a_D&A":-800360,"b_D&A":-688128,"a_Tax":-1354580,"b_Tax":-1164600},{"p":"2022-08","yr":2022,"a_Revenue":30358146,"b_Revenue":26125260,"a_Provision":-1704517,"b_Provision":-1465575,"a_OpEx",-15119452,"b_OpEx":-13005552,"a_D&A":-796533,"b_D&A":-685680,"a_Tax":-1348322,"b_Tax":-1159800},{"p":"2022-09","yr":2022,"a_Revenue":29617430,"b_Revenue":25490520,"a_Provision":-1663441,"b_Provision":-1429469,"a_OpEx":-14757437,"b_OpEx":-12691176,"a_D&A":-777765,"b_D&A":-669108,"a_Tax":-1316129,"b_Tax":-1133640},{"p":"2022-10","yr":2022,"a_Revenue":30521689,"b_Revenue":26266060,"a_Provision":-1713706,"b_Provision":-1472900,"a_OpEx":-15200723,"b_OpEx":-13072072,"a_D&A":-800998,"b_D&A":-688736,"a_Tax":-1355621,"b_Tax":-1165160},{"p":"2022-11","yr":2022,"a_Revenue":29679548,"b_Revenue":25543980,"a_Provision":-1666929,"b_Provision":-1432463,"a_OpEx":-14782226,"b_OpEx":-12712560,"a_D&A":-778908,"b_D&A":-670236,"a_Tax":-1317887,"b_Tax":-1135260},{"p":"2022-12","yr":2022,"a_Revenue":31556258,"b_Revenue":27166740,"a_Provision":-1771847,"b_Provision":-1523538,"a_OpEx":-15719292,"b_OpEx":-13529376,"a_D&A":-827831,"b_D&A":-714984,"a_Tax":-1402454,"b_Tax":-1207440},{"p":"2023-01","yr":2023,"a_Revenue":31854282,"b_Revenue":28620000,"a_Provision":-1789561,"b_Provision":-1605312,"a_OpEx":-15869688,"b_OpEx":-14248320,"a_D&A":-836054,"b_D&A":-750528,"a_Tax":-1414876,"b_Tax":-1270800},{"p":"2023-02","yr":2023,"a_Revenue":29517396,"b_Revenue":26527920,"a_Provision":-1657368,"b_Provision":-1488564,"a_OpEx":-14703884,"b_OpEx":-13207056,"a_D&A":-774949,"b_D&A":-695952,"a_Tax":-1312013,"b_Tax":-1178640},{"p":"2023-03","yr":2023,"a_Revenue":31923285,"b_Revenue":28682100,"a_Provision":-1793449,"b_Provision":-1608798,"a_OpEx":-15904220,"b_OpEx":-14279136,"a_D&A":-837872,"b_D&A":-752196,"a_Tax":-1417946,"b_Tax":-1274040},{"p":"2023-04","yr":2023,"a_Revenue":30984768,"b_Revenue":27838020,"a_Provision":-1740215,"b_Provision":-1561729,"a_OpEx":-15436428,"b_OpEx":-13858128,"a_D&A":-812888,"b_D&A":-730044,"a_Tax":-1378258,"b_Tax":-1236540},{"p":"2023-05","yr":2023,"a_Revenue":31715162,"b_Revenue":28502020,"a_Provision":-1780399,"b_Provision":-1599113,"a_OpEx":-15789624,"b_OpEx":-14189328,"a_D&A":-831570,"b_D&A":-747294,"a_Tax":-1409791,"b_Tax":-1265520},{"p":"2023-06","yr":2023,"a_Revenue":31584419,"b_Revenue":28384380,"a_Provision":-1773024,"b_Provision":-1592525,"a_OpEx":-15724255,"b_OpEx":-14131488,"a_D&A":-828090,"b_D&A":-744444,"a_Tax":-1403990,"b_Tax":-1260720},{"p":"2023-07","yr":2023,"a_Revenue":32022413,"b_Revenue":28777560,"a_Provision":-1797724,"b_Provision":-1613946,"a_OpEx":-15942714,"b_OpEx":-14321568,"a_D&A":-840070,"b_D&A":-754596,"a_Tax":-1421649,"b_Tax":-1278840},{"p":"2023-08","yr":2023,"a_Revenue":31874812,"b_Revenue":28645020,"a_Provision":-1789434,"b_Provision":-1606202,"a_OpEx":-15869376,"b_OpEx":-14265048,"a_D&A":-835944,"b_D&A":-751068,"a_Tax":-1414751,"b_Tax":-1271760},{"p":"2023-09","yr":2023,"a_Revenue":30984768,"b_Revenue":27838020,"a_Provision":-1740215,"b_Provision":-1561729,"a_OpEx":-15436428,"b_OpEx":-13858128,"a_D&A":-812888,"b_D&A":-730044,"a_Tax":-1378258,"b_Tax":-1236540},{"p":"2023-10","yr":2023,"a_Revenue":32043816,"b_Revenue":28796760,"a_Provision":-1798923,"b_Provision":-1615025,"a_OpEx":-15953380,"b_OpEx":-14330928,"a_D&A":-840631,"b_D&A":-755076,"a_Tax":-1422597,"b_Tax":-1279800},{"p":"2023-11","yr":2023,"a_Revenue":31070664,"b_Revenue":27915300,"a_Provision":-1745045,"b_Provision":-1565458,"a_OpEx":-15479580,"b_OpEx":-13895328,"a_D&A":-815165,"b_D&A":-732096,"a_Tax":-1382098,"b_Tax":-1239960},{"p":"2023-12","yr":2023,"a_Revenue":33121254,"b_Revenue":29742660,"a_Provision":-1859773,"b_Provision":-1668630,"a_OpEx":-16571263,"b_OpEx":-14802624,"a_D&A":-872564,"b_D&A":-779676,"a_Tax":-1470958,"b_Tax":-1320360},{"p":"2024-01","yr":2024,"a_Revenue":35054942,"b_Revenue":28441440,"a_Provision":-1681099,"b_Provision":-1594721,"a_OpEx":-14858088,"b_OpEx":-14162592,"a_D&A":-782010,"b_D&A":-745920,"a_Tax":-1558378,"b_Tax":-1264080},{"p":"2024-02","yr":2024,"a_Revenue":32531764,"b_Revenue":26377536,"a_Provision":-1559119,"b_Provision":-1479343,"a_OpEx":-13785668,"b_OpEx":-13131648,"a_D&A":-725393,"b_D&A":-691296,"a_Tax":-1445386,"b_Tax":-1172160},{"p":"2024-03","yr":2024,"a_Revenue":36082786,"b_Revenue":29271960,"a_Provision":-1729741,"b_Provision":-1641230,"a_OpEx":-15292006,"b_OpEx":-14571744,"a_D&A":-805011,"b_D&A":-767352,"a_Tax":-1603427,"b_Tax":-1299960},{"p":"2024-04","yr":2024,"a_Revenue":35033537,"b_Revenue":28423920,"a_Provision":-1679985,"b_Provision":-1593732,"a_OpEx":-14852827,"b_OpEx":-14153856,"a_D&A":-781774,"b_D&A":-745632,"a_Tax":-1557423,"b_Tax":-1263120},{"p":"2024-05","yr":2024,"a_Revenue":35853977,"b_Revenue":29087640,"a_Provision":-1718396,"b_Provision":-1630508,"a_OpEx":-15199424,"b_OpEx":-14489688,"a_D&A":-800421,"b_D&A":-763608,"a_Tax":-1592930,"b_Tax":-1292520},{"p":"2024-06","yr":2024,"a_Revenue":35694302,"b_Revenue":28958040,"a_Provision":-1710529,"b_Provision":-1623251,"a_OpEx":-15131741,"b_OpEx":-14425272,"a_D&A":-797030,"b_D&A":-759744,"a_Tax":-1585802,"b_Tax":-1286160},{"p":"2024-07","yr":2024,"a_Revenue":36208697,"b_Revenue":29373960,"a_Provision":-1734774,"b_Provision":-1646942,"a_OpEx":-15345393,"b_OpEx":-14622552,"a_D&A":-807735,"b_D&A":-769776,"a_Tax":-1608218,"b_Tax":-1304640},{"p":"2024-08","yr":2024,"a_Revenue":36043823,"b_Revenue":29240280,"a_Provision":-1727059,"b_Provision":-1639456,"a_OpEx":-15275663,"b_OpEx":-14556216,"a_D&A":-804035,"b_D&A":-766536,"a_Tax":-1601533,"b_Tax":-1297680},{"p":"2024-09","yr":2024,"a_Revenue":35056107,"b_Revenue":28442385,"a_Provision":-1680174,"b_Provision":-1594774,"a_OpEx":-14858942,"b_OpEx":-14163079,"a_D&A":-782056,"b_D&A":-745941,"a_Tax":-1558430,"b_Tax":-1264107},{"p":"2024-10","yr":2024,"a_Revenue":36236542,"b_Revenue":29396580,"a_Provision":-1736108,"b_Provision":-1648211,"a_OpEx":-15357279,"b_OpEx":-14633736,"a_D&A":-808361,"b_D&A":-770244,"a_Tax":-1609453,"b_Tax":-1305720},{"p":"2024-11","yr":2024,"a_Revenue":35073163,"b_Revenue":28455240,"a_Provision":-1681019,"b_Provision":-1595494,"a_OpEx":-14866186,"b_OpEx":-14169984,"a_D&A":-782398,"b_D&A":-746136,"a_Tax":-1558786,"b_Tax":-1264680},{"p":"2024-12","yr":2024,"a_Revenue":38327882,"b_Revenue":30906553,"a_Provision":-1838741,"b_Provision":-1655834,"a_OpEx":-17416579,"b_OpEx":-16026595,"a_D&A":-934988,"b_D&A":-815443,"a_Tax":-1524097,"b_Tax":-1329799}];
+
+const REGIONAL = [{"region":"Northeast","a_Revenue":84686914,"a_Provision":-4190729,"a_OpEx":-35299164,"a_D&A":-2123405,"a_Tax":-3464743},{"region":"Southeast","a_Revenue":87940108,"a_Provision":-4353203,"a_OpEx":-36647594,"a_D&A":-2207402,"a_Tax":-3596937},{"region":"Midwest","a_Revenue":90191701,"a_Provision":-4464446,"a_OpEx":-37586011,"a_D&A":-2261886,"a_Tax":-3689713},{"region":"Southwest","a_Revenue":88815852,"a_Provision":-4397121,"a_OpEx":-37024337,"a_D&A":-2228058,"a_Tax":-3631512},{"region":"West","a_Revenue":92556951,"a_Provision":-4581915,"a_OpEx":-38592206,"a_D&A":-2321729,"a_Tax":-3786392}];
+
+const OPEX = [{"subcategory":"Personnel","amount":-83299588},{"subcategory":"Operations","amount":-29355841},{"subcategory":"Technology","amount":-21747439},{"subcategory":"Premises","amount":-14350248},{"subcategory":"Marketing","amount":-14229442},{"subcategory":"Professional Svcs","amount":-11188941},{"subcategory":"Admin","amount":-10977813}];
+
+const YEAR_SUMMARY = {"2022":{"rev":361080798,"prov":-18731991,"opex":-162579965,"da":-9626177,"tax":-16284617,"ni":153858048,"ebitda":179768842},"2023":{"rev":393701039,"prov":-21103479,"opex":-171509440,"da":-10384685,"tax":-17243840,"ni":173459595,"ebitda":201088120},"2024":{"rev":444191529,"prov":-21987415,"opex":-185149314,"da":-11142482,"tax":-18169299,"ni":207743019,"ebitda":237054800}};
+
+const BUDGET_2024 = {"Revenue":360341425,"Provision":-19919688,"OpEx":-171385855,"D&A":-9785318,"Tax":-15957597,"ni":143292967,"ebitda":169035882};
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+const M = v => '$' + (v/1e6).toFixed(1) + 'M';
+const Mpure = v => (v/1e6).toFixed(1);
+
+const CHART_DEFAULTS = {
+  plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 } } } },
+  scales: {
+    x: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#21262d' } },
+    y: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#21262d' } }
+  }
+};
+
+function mkChart(id, cfg) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  return new Chart(ctx, cfg);
+}
+
+// ── PAGE 1: EXEC BAR ────────────────────────────────────────────────────────
+mkChart('execBarChart', {
+  type: 'bar',
+  data: {
+    labels: ['FY 2022', 'FY 2023', 'FY 2024'],
+    datasets: [
+      { label: 'Revenue',    data: [361.1, 393.7, 444.2], backgroundColor: '#1f6feb' },
+      { label: 'EBITDA',     data: [179.8, 201.1, 237.1], backgroundColor: '#3fb950' },
+      { label: 'Net Income', data: [153.9, 173.5, 207.7], backgroundColor: '#39d353' }
+    ]
+  },
+  options: {
+    ...CHART_DEFAULTS,
+    plugins: { ...CHART_DEFAULTS.plugins, tooltip: { callbacks: { label: c => ` ${c.dataset.label}: $${c.parsed.y}M` } } }
+  }
+});
+
+// PAGE 1: WATERFALL
+(function() {
+  const items = [
+    { label: 'Revenue',     val:  444.2, color: '#1f6feb' },
+    { label: '− Provision', val:  -22.0, color: '#f85149' },
+    { label: 'Net Revenue', val:  422.2, color: '#58a6ff', total: true },
+    { label: '− OpEx',      val: -185.1, color: '#f85149' },
+    { label: 'EBITDA',      val:  237.1, color: '#3fb950', total: true },
+    { label: '− D&A',       val:  -11.1, color: '#f85149' },
+    { label: '− Tax',       val:  -18.2, color: '#f85149' },
+    { label: 'Net Income',  val:  207.7, color: '#39d353', total: true }
+  ];
+  const maxVal = 450;
+  const wf = document.getElementById('waterfall');
+  wf.innerHTML = items.map(it => {
+    const pct = Math.abs(it.val) / maxVal * 100;
+    const sign = it.val >= 0 ? '+' : '';
+    return `<div class="wf-bar">
+      <div class="wf-label">${it.label}</div>
+      <div class="wf-track">
+        <div class="wf-fill" style="width:${pct}%;background:${it.color}">
+          ${it.total ? '■' : ''}
+        </div>
+      </div>
+      <div class="wf-val ${it.val>=0?'pos':'neg'}">${sign}$${Math.abs(it.val)}M</div>
+    </div>`;
+  }).join('');
+})();
+
+// ── PAGE 2: VARIANCE ────────────────────────────────────────────────────────
+mkChart('varBar', {
+  type: 'bar',
+  data: {
+    labels: ['Revenue', 'Provision', 'OpEx', 'EBITDA', 'Net Income'],
+    datasets: [
+      { label: 'Actual',  data: [444.2, 22.0, 185.1, 237.1, 207.7], backgroundColor: '#1f6feb' },
+      { label: 'Budget',  data: [360.3, 19.9, 171.4, 169.0, 143.3], backgroundColor: '#30363d' }
+    ]
+  },
+  options: {
+    ...CHART_DEFAULTS,
+    plugins: { ...CHART_DEFAULTS.plugins, tooltip: { callbacks: { label: c => ` ${c.dataset.label}: $${c.parsed.y}M` } } }
+  }
+});
+
+mkChart('varPct', {
+  type: 'bar',
+  data: {
+    labels: ['Revenue', 'Provision', 'OpEx (over)', 'EBITDA', 'Net Income'],
+    datasets: [{
+      label: 'Variance %',
+      data: [23.3, -10.4, -8.0, 40.2, 45.0],
+      backgroundColor: [23.3, -10.4, -8.0, 40.2, 45.0].map(v => v > 0 ? '#3fb950' : '#f85149')
+    }]
+  },
+  options: {
+    ...CHART_DEFAULTS,
+    plugins: { ...CHART_DEFAULTS.plugins, tooltip: { callbacks: { label: c => ` ${c.parsed.y > 0 ? '+' : ''}${c.parsed.y}%` } } }
+  }
+});
+
+// ── PAGE 3: REGIONAL ────────────────────────────────────────────────────────
+const regColors = ['#58a6ff','#3fb950','#bc8cff','#d29922','#39d353'];
+const regShort  = ['NE','SE','MW','SW','WE'];
+
+mkChart('regBar', {
+  type: 'bar',
+  data: {
+    labels: REGIONAL.map(r => r.region),
+    datasets: [{
+      label: 'Revenue ($M)',
+      data: REGIONAL.map(r => +(r.a_Revenue/1e6).toFixed(1)),
+      backgroundColor: regColors
+    }]
+  },
+  options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } } }
+});
+
+const regNIs = REGIONAL.map(r => {
+  const ebitda = r.a_Revenue + r.a_Provision + r.a_OpEx;
+  return +((ebitda + r['a_D&A'] + r.a_Tax)/1e6).toFixed(1);
+});
+
+mkChart('regNI', {
+  type: 'bar',
+  data: {
+    labels: REGIONAL.map(r => r.region),
+    datasets: [{
+      label: 'Net Income ($M)',
+      data: regNIs,
+      backgroundColor: regColors
+    }]
+  },
+  options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } } }
+});
+
+// Regional table
+const regTbody = document.getElementById('regTable');
+REGIONAL.forEach((r, i) => {
+  const rev    = r.a_Revenue/1e6;
+  const prov   = r.a_Provision/1e6;
+  const opex   = r.a_OpEx/1e6;
+  const da     = r['a_D&A']/1e6;
+  const tax    = r.a_Tax/1e6;
+  const netrev = rev + prov;
+  const ebitda = netrev + opex;
+  const ni     = ebitda + da + tax;
+  const eMargin = (ebitda/rev*100).toFixed(1);
+  const cir     = (Math.abs(opex)/rev*100).toFixed(1);
+  regTbody.innerHTML += `<tr>
+    <td><span class="region-pill r-${regShort[i]}">${r.region}</span></td>
+    <td class="num">$${rev.toFixed(1)}M</td>
+    <td class="num neg">($${Math.abs(prov).toFixed(1)}M)</td>
+    <td class="num">$${netrev.toFixed(1)}M</td>
+    <td class="num neg">($${Math.abs(opex).toFixed(1)}M)</td>
+    <td class="num">$${ebitda.toFixed(1)}M</td>
+    <td class="num">$${ni.toFixed(1)}M</td>
+    <td class="num">${eMargin}%</td>
+    <td class="num">${cir}%</td>
+  </tr>`;
+});
+
+// ── PAGE 4: MONTHLY TRENDS ───────────────────────────────────────────────────
+const labels36 = MONTHLY.map(m => m.p);
+
+const actualRev = MONTHLY.map(m => +(m.a_Revenue/1e6).toFixed(2));
+const budgetRev = MONTHLY.map(m => +(m.b_Revenue/1e6).toFixed(2));
+const ebitdaMon = MONTHLY.map(m => +((m.a_Revenue+m.a_Provision+m.a_OpEx)/1e6).toFixed(2));
+const niMon     = MONTHLY.map(m => +((m.a_Revenue+m.a_Provision+m.a_OpEx+(m['a_D&A']||0)+m.a_Tax)/1e6).toFixed(2));
+
+mkChart('trendLine', {
+  type: 'line',
+  data: {
+    labels: labels36,
+    datasets: [
+      { label: 'Actual Revenue',  data: actualRev, borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,.08)', fill: true,  tension: .3, pointRadius: 2 },
+      { label: 'Budget Revenue',  data: budgetRev, borderColor: '#30363d', borderDash: [5,4], fill: false, tension: .3, pointRadius: 0 }
+    ]
+  },
+  options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins } }
+});
+
+mkChart('ebitdaTrend', {
+  type: 'line',
+  data: {
+    labels: labels36,
+    datasets: [{ label: 'EBITDA', data: ebitdaMon, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,.08)', fill: true, tension: .3, pointRadius: 2 }]
+  },
+  options: CHART_DEFAULTS
+});
+
+mkChart('niTrend', {
+  type: 'line',
+  data: {
+    labels: labels36,
+    datasets: [{ label: 'Net Income', data: niMon, borderColor: '#39d353', backgroundColor: 'rgba(57,211,83,.08)', fill: true, tension: .3, pointRadius: 2 }]
+  },
+  options: CHART_DEFAULTS
+});
+
+// ── PAGE 5: COST ANALYSIS ────────────────────────────────────────────────────
+const opexColors = ['#d29922','#1f6feb','#bc8cff','#f85149','#58a6ff','#3fb950','#39d353'];
+
+mkChart('opexDonut', {
+  type: 'doughnut',
+  data: {
+    labels: OPEX.map(o => o.subcategory),
+    datasets: [{
+      data: OPEX.map(o => +(Math.abs(o.amount)/1e6).toFixed(1)),
+      backgroundColor: opexColors,
+      borderColor: '#161b22',
+      borderWidth: 2
+    }]
+  },
+  options: {
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#8b949e', font: { size: 11 }, padding: 10, boxWidth: 12 } },
+      tooltip: { callbacks: { label: c => ` ${c.label}: $${c.parsed.toFixed(1)}M` } }
+    }
+  }
+});
+
+// Budget estimates for OpEx subcategories (approx %)
+const opexBudgets = [76.8, 27.7, 19.0, 13.7, 13.0, 10.4, 10.4];
+
+mkChart('opexVarBar', {
+  type: 'bar',
+  data: {
+    labels: OPEX.map(o => o.subcategory),
+    datasets: [
+      { label: 'Actual',  data: OPEX.map(o => +(Math.abs(o.amount)/1e6).toFixed(1)), backgroundColor: opexColors },
+      { label: 'Budget',  data: opexBudgets, backgroundColor: '#30363d' }
+    ]
+  },
+  options: {
+    ...CHART_DEFAULTS,
+    indexAxis: 'y',
+    plugins: { ...CHART_DEFAULTS.plugins, tooltip: { callbacks: { label: c => ` ${c.dataset.label}: $${c.parsed.x.toFixed(1)}M` } } },
+    scales: {
+      x: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#21262d' } },
+      y: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#21262d' } }
+    }
+  }
+});
+
+// ── NAVIGATION ───────────────────────────────────────────────────────────────
+function showPage(id, tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  tab.classList.add('active');
+}
+</script>
+</body>
+</html>
